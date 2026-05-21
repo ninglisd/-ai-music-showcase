@@ -1,0 +1,266 @@
+// Seed script — run ONCE to migrate existing songs.js data into Supabase
+// Usage: node supabase/seed.js
+// Requires environment variables:
+//   VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, VITE_SUPABASE_ANON_KEY
+// Read them from a .env file or set them before running.
+
+import { createClient } from "@supabase/supabase-js"
+import { readFileSync } from "fs"
+import { resolve, dirname } from "path"
+import { fileURLToPath } from "url"
+
+// Try to load .env manually (simplified dotenv)
+function loadEnv() {
+  try {
+    const __dirname = dirname(fileURLToPath(import.meta.url))
+    const envPath = resolve(__dirname, "..", ".env.local")
+    const content = readFileSync(envPath, "utf-8")
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith("#")) continue
+      const eq = trimmed.indexOf("=")
+      if (eq === -1) continue
+      const key = trimmed.slice(0, eq).trim()
+      const value = trimmed.slice(eq + 1).trim()
+      if (!process.env[key]) process.env[key] = value
+    }
+  } catch {}
+}
+loadEnv()
+
+if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
+  console.error("Set them in .env.local or as environment variables")
+  process.exit(1)
+}
+
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+)
+
+// Existing songs data (copied from songs.js)
+const songs = [
+  {
+    title: "时之圆",
+    artist: "LINING&SUNO AI",
+    genre: "氛围民谣",
+    duration: 236,
+    audio_path: "时之圆.mp3",
+    cover: "from-violet-600 via-purple-500 to-cyan-400",
+    color: "#5c66f6",
+    lyrics: [
+      { time: 0, text: "♪ 前奏 ♪" },
+      { time: 16, text: "冰层裂开第一道光" },
+      { time: 22, text: "惊醒沉睡的土壤" },
+      { time: 28, text: "柳丝垂落如绿浪" },
+      { time: 34, text: "风把新生轻轻唱" },
+      { time: 42, text: "蝉鸣撕扯着热浪" },
+      { time: 48, text: "荷花在暴雨中开放" },
+      { time: 54, text: "闪电只是云的印章" },
+      { time: 60, text: "彩虹是天空的奖赏" },
+      { time: 68, text: "落叶铺成金色海洋" },
+      { time: 74, text: "雁阵写下人字两行" },
+      { time: 80, text: "果实垂首向大地仰望" },
+      { time: 86, text: "成熟是学会了弯腰的模样" },
+      { time: 94, text: "白雪覆盖所有过往" },
+      { time: 100, text: "枯枝在寒风中守望" },
+      { time: 106, text: "冰层下暗流在涌荡" },
+      { time: 112, text: "等待是最深的倔强" },
+      { time: 120, text: "没有不谢的芬芳" },
+      { time: 126, text: "没有永恒的冰凉" },
+      { time: 132, text: "圆画到最后 起点就在终点旁" },
+      { time: 140, text: "我们学会告别 才懂得生长" },
+      { time: 146, text: "凋零和盛开 都是光的形状" },
+      { time: 154, text: "春不为花谢悲伤" },
+      { time: 160, text: "夏不为秋来慌张" },
+      { time: 166, text: "冬不为寒夜仓皇" },
+      { time: 172, text: "四季只是 时间的浪" },
+      { time: 180, text: "当最后一片雪融成了溪响" },
+      { time: 188, text: "你听见岁月在低声讲——" },
+      { time: 196, text: "所谓永恒" },
+      { time: 204, text: "不过是变化在流浪" },
+      { time: 216, text: "♪ 尾声 ♪" },
+    ],
+  },
+  {
+    title: "破阵子",
+    artist: "LINING&SUNO AI",
+    genre: "民谣金属",
+    duration: 167,
+    audio_path: "破阵子.mp3",
+    cover: "from-emerald-500 via-teal-400 to-blue-500",
+    color: "#10b981",
+    lyrics: [
+      { time: 0, text: "♪ 战鼓 ♪" },
+      { time: 8, text: "(男声念白) 醉里挑灯看剑，梦回吹角连营……" },
+      { time: 16, text: "醉里挑灯看剑 梦回吹角连营" },
+      { time: 22, text: "八百里 分麾下炙 麾下炙" },
+      { time: 28, text: "五十弦 翻塞外声 塞外声" },
+      { time: 34, text: "沙场秋点兵 沙场秋点兵" },
+      { time: 42, text: "马作的卢飞快" },
+      { time: 48, text: "弓如霹雳弦惊" },
+      { time: 54, text: "雷霆万钧 撕裂黑夜" },
+      { time: 60, text: "铁骑狂奔 踏碎疆界" },
+      { time: 66, text: "了却君王天下事！天下事" },
+      { time: 72, text: "赢得生前身后名！身后名" },
+      { time: 78, text: "驱散风沙 踏破贺兰山缺" },
+      { time: 84, text: "了却君王天下事！天下事" },
+      { time: 92, text: "看江山残破 谁在叹息" },
+      { time: 98, text: "提长枪纵马 跨过长河万里" },
+      { time: 104, text: "八百里分麾下炙 赏赐给兄弟" },
+      { time: 110, text: "五十弦翻塞外声 战歌正响起" },
+      { time: 116, text: "点兵！点兵！沙场秋点兵" },
+      { time: 122, text: "了却君王天下事！天下事" },
+      { time: 128, text: "赢得生前身后名！身后名" },
+      { time: 134, text: "驱散风沙 踏破贺兰山缺" },
+      { time: 140, text: "了却君王天下事！天下事" },
+      { time: 148, text: "可怜……" },
+      { time: 153, text: "可怜白发生……" },
+      { time: 157, text: "白发生……" },
+      { time: 160, text: "(战鼓远去，风沙声)" },
+      { time: 163, text: "梦醒了" },
+      { time: 165, text: "只剩一头白发……" },
+      { time: 166, text: "(淡出)" },
+      { time: 167, text: "♪ 终 ♪" },
+    ],
+  },
+  {
+    title: "寻他",
+    artist: "LINING&SUNOAI",
+    genre: "电子流行",
+    duration: 227,
+    audio_path: "寻他.mp3",
+    cover: "from-pink-500 via-rose-400 to-orange-400",
+    color: "#ec4899",
+    lyrics: [
+      { time: 0, text: "♪ 合成器 ♪" },
+      { time: 6, text: "(轻快电子合成器，伴随清脆风铃与古筝)" },
+      { time: 12, text: "(人声哼唱) 嗯……" },
+      { time: 18, text: "东风夜放花千树" },
+      { time: 24, text: "更吹落、星如雨" },
+      { time: 30, text: "宝马雕车香满路 (香满路)" },
+      { time: 36, text: "凤箫声动 玉壶光转 一夜鱼龙舞" },
+      { time: 44, text: "满街喧闹 遮住谁的孤单" },
+      { time: 50, text: "漫天烟火 烧完谁的期盼" },
+      { time: 56, text: "蛾儿雪柳黄金缕" },
+      { time: 62, text: "笑语盈盈 暗香去" },
+      { time: 70, text: "众里寻他千百度！" },
+      { time: 76, text: "蓦然回首——" },
+      { time: 80, text: "那人却在、灯火阑珊处！" },
+      { time: 88, text: "众里寻他千百度！" },
+      { time: 94, text: "只剩寂寞 在狂欢里谢幕！" },
+      { time: 102, text: "霓虹模糊了 铅华洗尽的眼" },
+      { time: 108, text: "擦肩而过 多少张陌生的脸" },
+      { time: 114, text: "她们戴着金翠 欢笑着走远" },
+      { time: 120, text: "而你在哪里 躲在热闹的背面" },
+      { time: 128, text: "众里寻他千百度！" },
+      { time: 134, text: "蓦然回首——" },
+      { time: 138, text: "那人却在、灯火阑珊处！" },
+      { time: 146, text: "(电子旋律延展)" },
+      { time: 156, text: "众里寻他千百度！" },
+      { time: 162, text: "只剩寂寞 在狂欢里谢幕！" },
+      { time: 170, text: "笑语盈盈 随风散去……" },
+      { time: 178, text: "你在哪里……" },
+      { time: 184, text: "你在哪里……" },
+      { time: 192, text: "(环境音：远处的喧嚣声，近处的风声)" },
+      { time: 200, text: "蓦然回首。" },
+      { time: 206, text: "那人却在……" },
+      { time: 212, text: "灯火阑珊处。" },
+      { time: 220, text: "(音乐淡出)" },
+      { time: 225, text: "♪ 渐弱 ♪" },
+    ],
+  },
+  {
+    title: "你在千里之外",
+    artist: "LINING&SUNO AI",
+    genre: "流行抒情",
+    duration: 236,
+    audio_path: "你在千里之外.mp3",
+    cover: "from-orange-500 via-yellow-400 to-red-500",
+    color: "#f97316",
+    lyrics: [
+      { time: 18, text: "长街灯影摇晃" },
+      { time: 24, text: "你转身没有声响" },
+      { time: 30, text: "雨落在旧城墙" },
+      { time: 36, text: "像一句没说完的谎" },
+      { time: 44, text: "我把思念折成信" },
+      { time: 50, text: "寄往没有地址的远方" },
+      { time: 56, text: "风经过你名字时" },
+      { time: 62, text: "却不肯停下回望" },
+      { time: 72, text: "如果结局早已写好" },
+      { time: 78, text: "为何相遇还会心跳" },
+      { time: 84, text: "你在天涯一角" },
+      { time: 90, text: "我在人海徒劳" },
+      { time: 100, text: "你在千里之外，风吹不到我怀" },
+      { time: 108, text: "一眼就是一生的债" },
+      { time: 116, text: "你在千里之外，月照不到回来" },
+      { time: 124, text: "我还在等一句晚安" },
+      { time: 132, text: "千里之外" },
+      { time: 136, text: "我听见你还在" },
+      { time: 142, text: "像一场未醒来的海" },
+      { time: 148, text: "千里之外" },
+      { time: 152, text: "风替我说出来" },
+      { time: 158, text: "说爱从未离开" },
+      { time: 170, text: "人潮退去以后" },
+      { time: 176, text: "时间开始沉默" },
+      { time: 182, text: "我把回忆反复拼凑" },
+      { time: 188, text: "却拼不回你轮廓" },
+      { time: 196, text: "风停在人海尽头" },
+      { time: 202, text: "故事无声漂流" },
+      { time: 212, text: "如果重来一次" },
+      { time: 218, text: "我还会为你停留" },
+      { time: 224, text: "你在千里之外" },
+      { time: 228, text: "我在风里徘徊" },
+      { time: 232, text: "如果重来一次" },
+      { time: 236, text: "我还会等待" },
+    ],
+  },
+]
+
+async function seed() {
+  console.log(`Seeding ${songs.length} songs...`)
+
+  for (const song of songs) {
+    const { lyrics, ...songData } = song
+
+    // Insert song
+    const { data: created, error: songErr } = await supabase
+      .from("songs")
+      .insert(songData)
+      .select()
+      .single()
+
+    if (songErr) {
+      console.error(`Failed to insert "${song.title}":`, songErr.message)
+      continue
+    }
+
+    console.log(`✓ ${created.title} (${created.id})`)
+
+    // Insert lyrics
+    if (lyrics.length > 0) {
+      const lyricRows = lyrics.map((l, i) => ({
+        song_id: created.id,
+        time: l.time,
+        text: l.text,
+        sort_order: i,
+      }))
+
+      const { error: lyricErr } = await supabase.from("lyrics").insert(lyricRows)
+      if (lyricErr) {
+        console.error(`  ✗ Lyrics failed:`, lyricErr.message)
+      } else {
+        console.log(`  └─ ${lyricRows.length} lyrics inserted`)
+      }
+    }
+  }
+
+  console.log("\nDone! Upload MP3 files manually via Supabase Dashboard → Storage → music bucket")
+  console.log("Files to upload from public/music/:")
+  for (const song of songs) {
+    console.log(`  - ${song.audio_path}`)
+  }
+}
+
+seed()
