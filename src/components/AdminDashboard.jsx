@@ -125,24 +125,32 @@ export default function AdminDashboard() {
                     {song.artist} · {song.genre} · {formatDuration(song.duration)}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <Link
                     to={`/admin/songs/${song.id}`}
-                    className="p-2 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/[0.06] transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-cyan-300/60
+                               bg-white/[0.04] border border-white/[0.06]
+                               hover:text-cyan-200 hover:bg-white/[0.08] hover:border-cyan-400/20
+                               transition-colors text-xs"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
+                    编辑
                   </Link>
                   <button
                     onClick={() => setDeleteId(song.id)}
-                    className="p-2 rounded-lg text-white/20 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-red-300/50
+                               bg-white/[0.04] border border-white/[0.06]
+                               hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20
+                               transition-colors text-xs"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <polyline points="3 6 5 6 21 6" />
                       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                     </svg>
+                    删除
                   </button>
                 </div>
               </div>
