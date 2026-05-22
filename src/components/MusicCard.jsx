@@ -9,10 +9,8 @@ function formatTime(seconds) {
 /* ── Per-song generative art preset ── */
 function getArtStyle(song) {
   const map = {
-    "时之圆": "bloom",       // flowing flower-like particle sculpture
-    "破阵子": "charge",       // rotating charged polyhedron energy field
-    "寻他": "terrain",        // granular red light streams
-    "你在千里之外": "warmth",  // warm flowing gradients
+    "时之圆": "bloom",
+    "不畏风雨": "forest",
   }
   return map[song.title] || "default"
 }
@@ -147,28 +145,45 @@ function CoverArt({ song }) {
         </>
       )}
 
-      {/* ── WARMTH: 你在千里之外 — warm flowing gradients ── */}
-      {style === "warmth" && (
+      {/* ── FOREST: 不畏风雨 — dappled light through leaves ── */}
+      {style === "forest" && (
         <>
           <div className="absolute inset-0" style={{
             background: `
-              radial-gradient(circle at 40% 30%, ${c}30 0%, transparent 50%),
-              radial-gradient(circle at 60% 60%, #f59e0b20 0%, transparent 50%),
-              radial-gradient(circle at 50% 50%, ${c}15 0%, transparent 60%)
+              radial-gradient(ellipse 200px 300px at 20% 20%, ${c}35 0%, transparent 60%),
+              radial-gradient(ellipse 150px 250px at 70% 60%, #22c55e25 0%, transparent 55%),
+              radial-gradient(ellipse 250px 200px at 50% 80%, ${c}20 0%, transparent 60%)
             `,
+            animation: "nebulaDrift 16s ease-in-out infinite alternate",
           }} />
-          {Array.from({ length: 12 }).map((_, i) => (
+          {/* Light rays */}
+          {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="absolute rounded-full blur-sm"
+              className="absolute w-[2px] top-0 bottom-0 opacity-25"
               style={{
-                width: `${4 + Math.sin(i) * 6}px`,
-                height: `${4 + Math.cos(i) * 6}px`,
-                left: `${15 + (i / 12) * 70}%`,
-                top: `${20 + Math.sin(i * 2.5) * 30 + 30}%`,
-                background: i % 3 === 0 ? `${c}60` : i % 3 === 1 ? "#fbbf2470" : "#f9731630",
-                animation: `particleFloat ${2.5 + Math.random() * 2}s ease-in-out infinite`,
-                animationDelay: `${i * 0.2}s`,
+                left: `${10 + i * 14 + Math.sin(i * 1.3) * 8}%`,
+                background: `linear-gradient(to bottom, ${c}60 0%, ${c}20 50%, transparent 100%)`,
+                transform: `rotate(${(i - 2.5) * 3}deg)`,
+                animation: `particleFloat ${4 + i * 0.6}s ease-in-out infinite`,
+                animationDelay: `${i * 0.4}s`,
+              }}
+            />
+          ))}
+          {/* Floating leaf particles */}
+          {Array.from({ length: 16 }).map((_, i) => (
+            <div
+              key={`l${i}`}
+              className="absolute rounded-full"
+              style={{
+                width: `${2 + Math.random() * 3}px`,
+                height: `${3 + Math.random() * 5}px`,
+                left: `${5 + Math.random() * 85}%`,
+                top: `${5 + Math.random() * 85}%`,
+                background: i % 3 === 0 ? `${c}50` : "#4ade8050",
+                borderRadius: i % 2 === 0 ? "50%" : "30% 70%",
+                animation: `particleFloat ${3 + Math.random() * 4}s ease-in-out infinite`,
+                animationDelay: `${Math.random() * 2}s`,
               }}
             />
           ))}
