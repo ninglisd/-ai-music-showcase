@@ -16,7 +16,6 @@ const songGradients = {
   "我想成为这样的人": ["#3d3818","#2d2510","#2a200c","#1a1808"],
   "破阵乐":         ["#5c1010","#4a0808","#3d0a0a","#1a0505"],
 }
-const defaultGradient = ["#c0392b","#8b1a1a","#5c1010","#2d0808"]
 const songGlows = {
   "白昼将尽":"#e05030","葬花吟":"#c97bdb","裂痕之舞":"#30b8c0","西西弗斯幸福":"#00e5ff",
   "时之圆":"#7b8cff","不畏风雨":"#40c060","莎莉花园":"#e0a030","二十亿光年的孤独":"#4080ff",
@@ -52,20 +51,44 @@ export default function FullscreenPlayer() {
     return Array.isArray(raw)?raw:[]
   },[currentSong?.lyrics,currentSong?.duration])
 
-  useEffect(()=>{
-    if(!isPlaying||!lyrics.length)return
-    const outer=lyricsOuterRef.current,inner=lyricsInnerRef.current
-    if(!outer||!inner)return
-    let unit=0,last=-2
-    const tick=()=>{
-      const a=audioRef?.current;if(!a||a.paused)return
-      if(!unit){const c0=inner.querySelector('[data-d="0"]'),c1=inner.querySelector('[data-d="1"]');if(!c0||!c1)return;unit=c1.offsetTop-c0.offsetTop;if(unit<=0)return}
-      let idx=-1;for(let i=lyrics.length-1;i>=0;i--){if(a.currentTime>=lyrics[i].time){idx=i;break}}
-      if(idx!==last){last=idx;const off=outer.clientHeight*.4-idx*unit;inner.style.transform=`translateY(${off}px)`;setSmoothLyricIdx(idx)}
+  // 歌词滚动 — 每次 tick 重新测量容器高度和行间距（兼容手机端布局变化）
+  useEffect(() => {
+    if (!isPlaying || !lyrics.length) return
+    const outer = lyricsOuterRef.current
+    const inner = lyricsInnerRef.current
+    if (!outer || !inner) return
+    let lastIdx = -2
+
+    const tick = () => {
+      const a = audioRef?.current
+      if (!a || a.paused) return
+      const h = outer.clientHeight
+      if (!h || h < 20) return
+      const c0 = inner.querySelector('[data-d="0"]')
+      const c1 = inner.querySelector('[data-d="1"]')
+      if (!c0 || !c1) return
+      const unit = c1.offsetTop - c0.offsetTop
+      if (unit <= 0) return
+
+      let idx = -1
+      for (let i = lyrics.length - 1; i >= 0; i--) {
+        if (a.currentTime >= lyrics[i].time) { idx = i; break }
+      }
+      if (idx >= 0 && idx !== lastIdx) {
+        lastIdx = idx
+        const offset = h * 0.35 - idx * unit
+        inner.style.transform = 'translateY(' + offset + 'px)'
+        setSmoothLyricIdx(idx)
+      }
     }
-    tick();const id=setInterval(tick,150)
-    return()=>{clearInterval(id);inner.style.transform='translateY(0px)'}
-  },[isPlaying,currentSong?.id,lyrics.length,audioRef])
+
+    tick()
+    const id = setInterval(tick, 250)
+    return () => {
+      clearInterval(id)
+      inner.style.transform = 'translateY(0px)'
+    }
+  }, [isPlaying, currentSong?.id, lyrics.length, audioRef])
 
   if(!isFullscreen||!currentSong)return null
 
@@ -93,7 +116,7 @@ export default function FullscreenPlayer() {
 
       <div className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-14 px-6 pt-4 pb-2 overflow-hidden min-h-0">
 
-        {/* ── Sony Walkman 白色款 ── */}
+        {/* Sony Walkman */}
         <div className="relative shrink-0 flex items-center justify-center
                         w-[240px] h-[340px] sm:w-[280px] sm:h-[400px] lg:w-[360px] lg:h-[480px]">
 
@@ -104,13 +127,10 @@ export default function FullscreenPlayer() {
               border:"1.5px solid rgba(0,0,0,0.06)",
             }}>
 
-            {/* LOGO */}
             <div className="absolute top-0 left-0 right-0 h-[10%] flex items-end justify-between px-5 pb-1.5"
               style={{borderBottom:"1px solid rgba(0,0,0,0.04)"}}>
               <span className="text-[13px] sm:text-[15px] font-black tracking-tight italic"
-                style={{color:"#2a2a2a",fontFamily:"'Syne','Instrument Sans',sans-serif",letterSpacing:"-0.02em"}}>
-                WALKMAN
-              </span>
+                style={{color:"#2a2a2a",fontFamily:"'Syne','Instrument Sans',sans-serif",letterSpacing:"-0.02em"}}>WALKMAN</span>
               <span className="text-[7px] font-semibold tracking-[0.25em] uppercase"
                 style={{color:"rgba(0,0,0,0.25)"}}>STEREO · AUTO REVERSE</span>
             </div>
@@ -119,46 +139,34 @@ export default function FullscreenPlayer() {
             <div className="absolute top-[12%] left-[6%] right-[6%] h-[50%] rounded-[14px] overflow-hidden"
               style={{background:"#c8dae8",border:"3px solid rgba(0,0,0,0.10)",boxShadow:"inset 0 4px 16px rgba(0,0,0,0.12), 0 2px 0 rgba(255,255,255,0.5)"}}>
 
-              {/* ── 逼真复古磁带 ── */}
               <div className="absolute inset-[2%] rounded-[5px]"
                 style={{background:"#f0d878",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 3px rgba(0,0,0,0.08)"}}>
 
-                {/* 上方大标签纸 */}
                 <div className="absolute top-[3%] left-[5%] right-[5%] h-[38%] rounded-[3px] flex flex-col items-center justify-center"
                   style={{background:"rgba(255,255,255,0.55)",border:"1px solid rgba(0,0,0,0.06)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.5)"}}>
                   <span className="text-[7px] sm:text-[8px] font-bold text-center leading-tight px-3"
-                    style={{color:"#3a2a10",fontFamily:"'Syne','Instrument Sans',sans-serif"}}>
-                    {currentSong.title}
-                  </span>
+                    style={{color:"#3a2a10",fontFamily:"'Syne','Instrument Sans',sans-serif"}}>{currentSong.title}</span>
                   <span className="text-[5px] mt-0.5 font-medium uppercase tracking-[0.1em]"
                     style={{color:"rgba(0,0,0,0.4)"}}>AI MUSIC · STEREO</span>
                 </div>
 
-                {/* 左视窗 — 透明塑料 + 磁带卷 */}
+                {/* 左转轮 */}
                 <div className="absolute top-[50%] -translate-y-1/2 flex items-center justify-center"
                   style={{left:"16%",width:"25%",aspectRatio:"1"}}>
-                  {/* 透明视窗 */}
                   <div className="w-full h-full rounded-full flex items-center justify-center"
                     style={{background:"rgba(180,190,200,0.20)",border:"2px solid rgba(0,0,0,0.12)",boxShadow:"inset 0 0 6px rgba(0,0,0,0.08)"}}>
-                    {/* 白色塑料轮毂 */}
                     <div className="w-[78%] h-[78%] rounded-full flex items-center justify-center"
                       style={{background:"#dce2e6",animation:"vinylSpin 1.3s linear infinite",animationPlayState:isPlaying?"running":"paused"}}>
-                      {/* 轮毂凹槽环 */}
                       <div className="w-[85%] h-[85%] rounded-full" style={{background:"#ddd6c8",border:"1px solid rgba(0,0,0,0.06)"}}/>
-                      {/* 6 辐条 */}
                       {[0,1,2,3,4,5].map(i=>(<div key={i} className="absolute w-0.5 bg-black/8 rounded-full" style={{height:"50%",transform:`rotate(${i*60}deg)`}}/>))}
-                      {/* 中心轴孔 */}
                       <div className="absolute w-[22%] h-[22%] rounded-full flex items-center justify-center" style={{background:"#d0c8b8",border:"0.5px solid rgba(0,0,0,0.1)"}}>
                         <div className="w-[35%] h-[35%] rounded-full" style={{background:"rgba(0,0,0,0.2)"}}/>
                       </div>
                     </div>
                   </div>
-                  {/* 缠绕的磁带（遮罩环） */}
-                  <div className="absolute inset-[11%] rounded-full border-[3px] pointer-events-none"
-                    style={{borderColor:`${glow}10`,opacity:0.3}}/>
                 </div>
 
-                {/* 右视窗 — 透明塑料 + 磁带卷 */}
+                {/* 右转轮 */}
                 <div className="absolute top-[50%] -translate-y-1/2 flex items-center justify-center"
                   style={{right:"16%",width:"25%",aspectRatio:"1"}}>
                   <div className="w-full h-full rounded-full flex items-center justify-center"
@@ -174,31 +182,24 @@ export default function FullscreenPlayer() {
                   </div>
                 </div>
 
-                {/* 底部：磁头开口 + 铜色压带垫 */}
                 <div className="absolute bottom-[8%] left-[34%] right-[34%]">
                   <div className="w-full h-[12px] rounded-[2px] flex items-center justify-center"
                     style={{background:"#1a1208",border:"0.5px solid rgba(0,0,0,0.2)"}}>
-                    {/* 金色磁头片 */}
                     <div className="w-[25%] h-[35%] rounded-[1px]" style={{background:"#c8a850",border:"0.5px solid rgba(0,0,0,0.15)"}}/>
                   </div>
                 </div>
               </div>
 
-              {/* 玻璃反光 */}
               <div className="absolute top-0 left-0 w-[35%] h-[35%] pointer-events-none"
                 style={{background:"linear-gradient(135deg, rgba(255,255,255,0.35) 0%, transparent 100%)",borderRadius:"14px 0 100% 0"}}/>
             </div>
 
-            {/* 歌曲信息 */}
             <div className="absolute top-[65%] left-[8%] right-[8%] text-center">
               <p className="text-[14px] sm:text-[16px] font-bold leading-tight"
-                style={{color:"#2a2a2a",fontFamily:"-apple-system,'SF Pro Display','PingFang SC',sans-serif"}}>
-                {currentSong.title}
-              </p>
+                style={{color:"#2a2a2a",fontFamily:"-apple-system,'SF Pro Display','PingFang SC',sans-serif"}}>{currentSong.title}</p>
               <p className="text-[10px] sm:text-[11px] mt-1" style={{color:"rgba(0,0,0,0.4)"}}>{currentSong.artist}</p>
             </div>
 
-            {/* Walkman 按键 */}
             <div className="absolute bottom-[6%] left-[10%] right-[10%] h-[13%] flex items-center justify-center gap-5 sm:gap-6"
               style={{borderTop:"1px solid rgba(0,0,0,0.05)"}}>
               <button onClick={(e)=>{e.stopPropagation();prev()}}
@@ -233,9 +234,7 @@ export default function FullscreenPlayer() {
 
           <div className="px-5 pt-5 pb-1 shrink-0">
             <h2 className="text-xl sm:text-2xl font-bold text-white/95 tracking-tight"
-              style={{fontFamily:"-apple-system,'SF Pro Display','PingFang SC',sans-serif"}}>
-              {currentSong.title}
-            </h2>
+              style={{fontFamily:"-apple-system,'SF Pro Display','PingFang SC',sans-serif"}}>{currentSong.title}</h2>
             <div className="flex items-center gap-2 mt-0.5 text-[12px] text-white/35 flex-wrap">
               <span>{currentSong.artist}</span><span>·</span><span>{currentSong.genre}</span>
               {duration>0&&<><span>·</span><span>{Math.floor(duration/60)} 分钟</span></>}
@@ -273,7 +272,6 @@ export default function FullscreenPlayer() {
         </div>
       </div>
 
-      {/* 底部控制 */}
       <div className="relative z-10 px-6 pt-2 pb-5"
         style={{background:"rgba(255,255,255,0.03)",backdropFilter:"blur(40px)",WebkitBackdropFilter:"blur(40px)",borderTop:"1px solid rgba(255,255,255,0.04)"}}>
         <div className="relative h-[3px] rounded-full cursor-pointer group/progress mb-3" style={{background:"rgba(255,255,255,0.06)"}}
