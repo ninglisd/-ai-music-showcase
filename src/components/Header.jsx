@@ -24,20 +24,22 @@ export default function Header() {
           </svg>
         </div>
 
-        {/* AUDIOVERSE — Quantum Multi-Gradient */}
+        {/* AUDIOVERSE — AUDIO white, VERSE gradient */}
         <h1
           className="font-bold uppercase select-none leading-none"
           style={{
             fontFamily: "'Space Grotesk', 'Syne', sans-serif",
             fontSize: "clamp(2.2rem, 6vw, 4rem)",
             letterSpacing: "0.22em",
+          }}
+        >
+          <span className="text-white">AUDIO</span>
+          <span style={{
             background: "linear-gradient(90deg, #00C3FF 0%, #BF00FF 45%, #00F5D4 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             filter: "drop-shadow(0 0 40px rgba(191,0,255,0.25))",
-          }}
-        >
-          AUDIOVERSE
+          }}>VERSE</span>
         </h1>
 
         {/* 声之维度 */}

@@ -5,6 +5,16 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "placeholder-k
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+export function getAnonymousId() {
+  const key = "audioverse_uid"
+  let id = localStorage.getItem(key)
+  if (!id) {
+    id = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+    localStorage.setItem(key, id)
+  }
+  return id
+}
+
 export function getPublicAudioUrl(path) {
   if (!path) return ""
   if (path.startsWith("http")) return path

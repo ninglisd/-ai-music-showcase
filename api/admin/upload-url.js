@@ -12,6 +12,10 @@ export default async function handler(req, res) {
   const { filename } = req.body || {}
   if (!filename) return res.status(400).json({ error: "Missing filename" })
 
+  // Sanitize filename: keep extension, replace name with safe hash
+  const ext = filename.includes(".") ? filename.slice(filename.lastIndexOf(".")) : ".mp3"
+  const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`
+
   const supabase = createClient(
     process.env.VITE_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -19,9 +23,9 @@ export default async function handler(req, res) {
 
   const { data, error } = await supabase.storage
     .from("music")
-    .createSignedUploadUrl(filename)
+    .createSignedUploadUrl(safeName)
 
   if (error) return res.status(500).json({ error: error.message })
 
-  return res.status(200).json({ signedUrl: data.signedUrl, path: filename })
+  return res.status(200).json({ signedUrl: data.signedUrl, path: safeName })
 }

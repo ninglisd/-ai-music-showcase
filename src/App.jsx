@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import { Routes, Route } from "react-router-dom"
 import { PlayerProvider, usePlayer } from "./context/PlayerContext"
 import useSongs from "./hooks/useSongs"
@@ -40,7 +41,25 @@ function EmptyState() {
 }
 
 function MainView() {
-  const { isFullscreen, songs } = usePlayer()
+  const { isFullscreen, songs, openFullscreen } = usePlayer()
+  const [shareChecked, setShareChecked] = useState(false)
+
+  // Handle ?song= share link
+  useEffect(() => {
+    if (shareChecked || songs.length === 0) return
+    setShareChecked(true)
+    const params = new URLSearchParams(window.location.search)
+    const songName = params.get("song")
+    if (songName) {
+      const idx = songs.findIndex((s) => s.title === decodeURIComponent(songName))
+      if (idx >= 0) {
+        setTimeout(() => openFullscreen(idx), 500)
+        const url = new URL(window.location)
+        url.searchParams.delete("song")
+        window.history.replaceState({}, "", url)
+      }
+    }
+  }, [songs, shareChecked, openFullscreen])
 
   if (songs.length === 0) {
     return (
@@ -64,7 +83,7 @@ function MainView() {
 }
 
 function PublicSite() {
-  const { songs, loading, error, refetch } = useSongs()
+  const { songs, loading, error, refetch, toggleLike, addComment } = useSongs()
 
   if (loading) return <LoadingSpinner text="正在加载音乐库..." />
   if (error) {
@@ -84,7 +103,7 @@ function PublicSite() {
   }
 
   return (
-    <PlayerProvider songs={songs}>
+    <PlayerProvider songs={songs} toggleLike={toggleLike} addComment={addComment}>
       <MainView />
     </PlayerProvider>
   )

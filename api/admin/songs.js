@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     const { data, error } = await supabase
       .from("songs")
       .select("*, lyrics(*)")
-      .order("created_at", { ascending: false })
+      .order("sort_order", { ascending: true })
       .order("sort_order", { foreignTable: "lyrics", ascending: true })
 
     if (error) return res.status(500).json({ error: error.message })
@@ -33,9 +33,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing required fields" })
     }
 
+    // Get next sort_order
+    const { data: last } = await supabase.from("songs").select("sort_order").order("sort_order", { ascending: false }).limit(1)
+    const nextSort = last && last.length > 0 ? (last[0].sort_order || 0) + 1 : 0
+
     const { data: song, error: songErr } = await supabase
       .from("songs")
-      .insert({ title, artist, genre, duration: Number(duration), audio_path, cover: cover || "from-violet-600 via-purple-500 to-cyan-400", color: color || "#5c66f6" })
+      .insert({ title, artist, genre, duration: Number(duration), audio_path, cover: cover || "from-violet-600 via-purple-500 to-cyan-400", color: color || "#5c66f6", sort_order: nextSort })
       .select()
       .single()
 

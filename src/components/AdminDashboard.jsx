@@ -44,6 +44,23 @@ export default function AdminDashboard() {
     fetchSongs()
   }, [fetchSongs])
 
+  async function handleMove(id, direction) {
+    try {
+      const res = await fetch("/api/admin/songs/reorder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({ id, direction }),
+      })
+      if (!res.ok) throw new Error("Reorder failed")
+      fetchSongs()
+    } catch {
+      setError("排序失败")
+    }
+  }
+
   async function handleDelete(id) {
     try {
       const res = await fetch(`/api/admin/songs/${id}`, {
@@ -125,7 +142,24 @@ export default function AdminDashboard() {
                     {song.artist} · {song.genre} · {formatDuration(song.duration)}
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
+                  {/* Up/Down arrows */}
+                  <div className="flex flex-col gap-0.5 mr-1">
+                    <button
+                      onClick={() => handleMove(song.id, "up")}
+                      className="w-5 h-5 flex items-center justify-center rounded bg-white/[0.04] border border-white/[0.06]
+                                 text-white/25 hover:text-white/60 hover:bg-white/[0.08] transition-colors"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="18,15 12,9 6,15" /></svg>
+                    </button>
+                    <button
+                      onClick={() => handleMove(song.id, "down")}
+                      className="w-5 h-5 flex items-center justify-center rounded bg-white/[0.04] border border-white/[0.06]
+                                 text-white/25 hover:text-white/60 hover:bg-white/[0.08] transition-colors"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6,9 12,15 18,9" /></svg>
+                    </button>
+                  </div>
                   <Link
                     to={`/admin/songs/${song.id}`}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-cyan-300/60

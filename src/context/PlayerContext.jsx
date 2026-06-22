@@ -2,14 +2,22 @@ import { createContext, useContext, useState, useRef, useCallback, useEffect } f
 
 const PlayerContext = createContext(null)
 
-export function PlayerProvider({ children, songs = [] }) {
+const SHUFFLE_HISTORY_MAX = 30
+
+export function PlayerProvider({ children, songs = [], toggleLike, addComment }) {
   const [currentIndex, setCurrentIndex] = useState(-1)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(0.7)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [playMode, setPlayMode] = useState("REPEAT_ALL") // NORMAL | REPEAT_ONE | REPEAT_ALL | SHUFFLE
+  const playModeRef = useRef(playMode)
+  const shuffleHistoryRef = useRef([])
   const audioRef = useRef(null)
+
+  // Keep ref in sync so onEnded closure always sees latest playMode
+  useEffect(() => { playModeRef.current = playMode }, [playMode])
 
   const currentSong = currentIndex >= 0 ? songs[currentIndex] : null
 
@@ -44,15 +52,33 @@ export function PlayerProvider({ children, songs = [] }) {
 
   const next = useCallback(() => {
     if (songs.length === 0) return
+    if (playMode === "SHUFFLE") {
+      shuffleHistoryRef.current.push(currentIndex)
+      if (shuffleHistoryRef.current.length > SHUFFLE_HISTORY_MAX) shuffleHistoryRef.current.shift()
+      const pool = songs.map((_, i) => i).filter((i) => !shuffleHistoryRef.current.includes(i))
+      if (pool.length === 0) {
+        shuffleHistoryRef.current = [currentIndex]
+        const newPool = songs.map((_, i) => i).filter((i) => i !== currentIndex)
+        const ri = newPool[Math.floor(Math.random() * newPool.length)]
+        play(ri >= 0 ? ri : (currentIndex + 1) % songs.length)
+      } else {
+        play(pool[Math.floor(Math.random() * pool.length)])
+      }
+      return
+    }
     const nextIndex = (currentIndex + 1) % songs.length
     play(nextIndex)
-  }, [currentIndex, play, songs.length])
+  }, [currentIndex, play, playMode, songs.length])
 
   const prev = useCallback(() => {
     if (songs.length === 0) return
+    if (playMode === "SHUFFLE" && shuffleHistoryRef.current.length > 0) {
+      play(shuffleHistoryRef.current.pop())
+      return
+    }
     const prevIndex = (currentIndex - 1 + songs.length) % songs.length
     play(prevIndex)
-  }, [currentIndex, play, songs.length])
+  }, [currentIndex, play, playMode, songs.length])
 
   const seek = useCallback((time) => {
     if (audioRef.current) {
@@ -86,7 +112,13 @@ export function PlayerProvider({ children, songs = [] }) {
     const onLoadedMetadata = () => setDuration(audio.duration)
     const onEnded = () => {
       setIsPlaying(false)
-      next()
+      if (playModeRef.current === "REPEAT_ONE") {
+        if (audio) { audio.currentTime = 0; audio.play() }
+      } else if (playModeRef.current === "NORMAL" && currentIndex >= songs.length - 1) {
+        // Stop at end in NORMAL mode
+      } else {
+        next()
+      }
     }
     const onPlay = () => setIsPlaying(true)
     const onPause = () => setIsPlaying(false)
@@ -132,6 +164,7 @@ export function PlayerProvider({ children, songs = [] }) {
       duration,
       volume,
       songs,
+      audioRef,
       play,
       pause,
       togglePlay,
@@ -142,6 +175,10 @@ export function PlayerProvider({ children, songs = [] }) {
       isFullscreen,
       openFullscreen,
       closeFullscreen,
+      playMode,
+      setPlayMode,
+      toggleLike,
+      addComment,
     }}>
       {children}
     </PlayerContext.Provider>

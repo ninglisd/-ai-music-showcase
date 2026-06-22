@@ -1,443 +1,302 @@
+import { useState, useRef, useEffect, useMemo } from "react"
 import { usePlayer } from "../context/PlayerContext"
+import CommentSection from "./CommentSection"
 
-function formatTime(seconds) {
-  const m = Math.floor(Math.max(0, seconds) / 60)
-  const s = Math.floor(Math.max(0, seconds)) % 60
-  return `${m}:${s.toString().padStart(2, "0")}`
+function fmt(s) { const m=Math.floor(Math.max(0,s)/60); return `${m}:${(Math.floor(Math.max(0,s))%60).toString().padStart(2,"0")}` }
+
+const songGradients = {
+  "白昼将尽":       ["#c0392b","#a02828","#8b1a1a","#5c1010"],
+  "葬花吟":         ["#7b2d8b","#5c2068","#4a154b","#2d1b3d"],
+  "裂痕之舞":       ["#155e6d","#0f4a5a","#0d3b4f","#0a2a38"],
+  "西西弗斯幸福":   ["#1a1a3e","#152040","#0f0f23","#0d1b2d"],
+  "时之圆":         ["#2d2d6b","#252560","#1a1a3e","#1a2a4a"],
+  "不畏风雨":       ["#1a4a2a","#153d20","#0d2818","#0f3018"],
+  "莎莉花园":       ["#5c3a1a","#4a2a10","#3d2010","#2a1808"],
+  "二十亿光年的孤独": ["#151d50","#121848","#0a1030","#0d1440"],
+  "我想成为这样的人": ["#3d3818","#2d2510","#2a200c","#1a1808"],
+  "破阵乐":         ["#5c1010","#4a0808","#3d0a0a","#1a0505"],
+}
+const defaultGradient = ["#c0392b","#8b1a1a","#5c1010","#2d0808"]
+const songGlows = {
+  "白昼将尽":"#e05030","葬花吟":"#c97bdb","裂痕之舞":"#30b8c0","西西弗斯幸福":"#00e5ff",
+  "时之圆":"#7b8cff","不畏风雨":"#40c060","莎莉花园":"#e0a030","二十亿光年的孤独":"#4080ff",
+  "我想成为这样的人":"#e0c040","破阵乐":"#e84020",
+}
+const HUE2 = [0,15,30,45,60,120,180,210,240,270,300,330]
+function autoGlow(title) {
+  let h = 0; for (let i=0;i<title.length;i++) h = ((h<<5)-h+title.charCodeAt(i))|0; h = Math.abs(h)
+  const hue = HUE2[h%HUE2.length]; return `hsl(${hue},70%,55%)`
+}
+function autoGrad(title) {
+  let h = 0; for (let i=0;i<title.length;i++) h = ((h<<5)-h+title.charCodeAt(i))|0; h = Math.abs(h)
+  const hue = HUE2[h%HUE2.length], sat = 45+(h%35), l = 22+(h%10)
+  return [`hsl(${hue},${sat}%,${l}%)`,`hsl(${(hue+25)%360},${sat-8}%,${l-5}%)`,`hsl(${(hue+15)%360},${sat-14}%,${l-10}%)`,`hsl(${hue},${sat-18}%,${l-15}%)`]
 }
 
 export default function FullscreenPlayer() {
-  const {
-    currentSong,
-    isPlaying,
-    currentTime,
-    duration,
-    volume,
-    isFullscreen,
-    togglePlay,
-    next,
-    prev,
-    seek,
-    changeVolume,
-    closeFullscreen,
-  } = usePlayer()
+  const { currentSong, isPlaying, currentTime, duration, volume,
+    isFullscreen, togglePlay, next, prev, seek, changeVolume, closeFullscreen, toggleLike, audioRef } = usePlayer()
+  const [viewTab, setViewTab] = useState("lyrics")
+  const [smoothLyricIdx, setSmoothLyricIdx] = useState(-1)
+  const lyricsOuterRef = useRef(null)
+  const lyricsInnerRef = useRef(null)
 
-  if (!isFullscreen || !currentSong) return null
-
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0
-
-  // Normalize lyrics: support plain text string or [{time, text}] array
-  const rawLyrics = currentSong?.lyrics
-  let lyrics = []
-  if (typeof rawLyrics === "string") {
-    const lines = rawLyrics.split("\n").filter((l) => l.trim())
-    const totalDuration = currentSong?.duration || 240
-    const gap = totalDuration / (lines.length + 1)
-    lyrics = lines.map((text, i) => ({ time: gap * (i + 1), text }))
-  } else if (Array.isArray(rawLyrics)) {
-    lyrics = rawLyrics
-  }
-
-  // Find current lyric line
-  let currentLyricIndex = -1
-  for (let i = lyrics.length - 1; i >= 0; i--) {
-    if (currentTime >= lyrics[i].time) {
-      currentLyricIndex = i
-      break
+  const lyrics = useMemo(() => {
+    const raw = currentSong?.lyrics
+    if (typeof raw === "string") {
+      const lines = raw.split("\n").filter(l=>l.trim())
+      const dur = currentSong?.duration||240
+      const gap = dur/(lines.length+1)
+      return lines.map((t,i)=>({time:gap*(i+1),text:t}))
     }
-  }
+    return Array.isArray(raw)?raw:[]
+  },[currentSong?.lyrics,currentSong?.duration])
+
+  useEffect(()=>{
+    if(!isPlaying||!lyrics.length)return
+    const outer=lyricsOuterRef.current,inner=lyricsInnerRef.current
+    if(!outer||!inner)return
+    let unit=0,last=-2
+    const tick=()=>{
+      const a=audioRef?.current;if(!a||a.paused)return
+      if(!unit){const c0=inner.querySelector('[data-d="0"]'),c1=inner.querySelector('[data-d="1"]');if(!c0||!c1)return;unit=c1.offsetTop-c0.offsetTop;if(unit<=0)return}
+      let idx=-1;for(let i=lyrics.length-1;i>=0;i--){if(a.currentTime>=lyrics[i].time){idx=i;break}}
+      if(idx!==last){last=idx;const off=outer.clientHeight*.4-idx*unit;inner.style.transform=`translateY(${off}px)`;setSmoothLyricIdx(idx)}
+    }
+    tick();const id=setInterval(tick,150)
+    return()=>{clearInterval(id);inner.style.transform='translateY(0px)'}
+  },[isPlaying,currentSong?.id,lyrics.length,audioRef])
+
+  if(!isFullscreen||!currentSong)return null
+
+  const progress=duration>0?(currentTime/duration)*100:0
+  const grad=songGradients[currentSong?.title]||autoGrad(currentSong?.title||"")
+  const glow=songGlows[currentSong?.title]||autoGlow(currentSong?.title||"")
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#0B0B0F] animate-[fadeIn_0.3s_ease-out]">
-      {/* Background blur gradient */}
-      <div
-        className="absolute inset-0 opacity-20 pointer-events-none"
-        style={{
-          background: `radial-gradient(ellipse at 50% 30%, ${currentSong.color}40 0%, transparent 60%),
-                       radial-gradient(ellipse at 50% 70%, ${currentSong.color}30 0%, transparent 50%)`,
-        }}
-      />
+    <div className="fixed inset-0 z-50 flex flex-col"
+      style={{ background:`linear-gradient(160deg, ${grad[0]} 0%, ${grad[1]} 35%, ${grad[2]} 65%, ${grad[3]} 100%)` }}>
 
-      {/* Top bar — close + song info */}
-      <div className="relative z-10 flex items-center justify-between px-6 py-4">
-        <button
-          onClick={closeFullscreen}
-          className="flex items-center gap-2 text-white/50 hover:text-white/90 transition-colors group"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <polyline points="15,18 9,12 15,6" />
-          </svg>
-          <span className="text-sm font-medium">返回</span>
-        </button>
-        <div className="text-center">
-          <p className="text-xs text-white/40 tracking-widest uppercase">Now Playing</p>
-        </div>
-        <div className="w-20" />
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-15%] left-[-10%] w-[65%] h-[65%] rounded-full"
+          style={{ background:`radial-gradient(circle, ${glow}30 0%, transparent 60%)`, filter:"blur(70px)" }} />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[55%] h-[55%] rounded-full"
+          style={{ background:`radial-gradient(circle, ${glow}25 0%, transparent 55%)`, filter:"blur(60px)" }} />
       </div>
 
-      {/* Main content: cover + lyrics side by side on desktop, stacked on mobile */}
-      <div className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16 px-6 pb-6 overflow-hidden">
-        {/* Cyberpunk Vinyl Record */}
-        <div className="relative w-72 h-72 sm:w-80 sm:h-80 lg:w-[420px] lg:h-[420px] shrink-0 flex items-center justify-center">
-          {/* Outer holographic ring -- counter-rotating */}
-          <div
-            className="absolute inset-[-6px] rounded-full z-0"
+      <button onClick={closeFullscreen}
+        className="absolute top-5 left-5 z-20 w-9 h-9 rounded-full flex items-center justify-center
+                   transition-all hover:scale-105"
+        style={{ background:"rgba(255,255,255,0.12)", backdropFilter:"blur(20px)", border:"1px solid rgba(255,255,255,0.10)" }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg>
+      </button>
+
+      <div className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-14 px-6 pt-4 pb-2 overflow-hidden min-h-0">
+
+        {/* ── Sony Walkman 白色款 ── */}
+        <div className="relative shrink-0 flex items-center justify-center
+                        w-[240px] h-[340px] sm:w-[280px] sm:h-[400px] lg:w-[360px] lg:h-[480px]">
+
+          <div className="relative w-full h-full rounded-[32px] overflow-hidden"
             style={{
-              background: `conic-gradient(from 0deg,
-                transparent 0deg, ${currentSong.color}30 25deg, transparent 55deg,
-                ${currentSong.color}12 100deg, transparent 130deg,
-                ${currentSong.color}30 190deg, transparent 220deg,
-                ${currentSong.color}12 280deg, transparent 310deg,
-                transparent 360deg)`,
-              animation: "vinylSpinRev 5s linear infinite",
-              animationPlayState: isPlaying ? "running" : "paused",
-              filter: "blur(1.5px)",
-            }}
-          />
+              background:`linear-gradient(170deg, #fafaf8 0%, #f2f0ec 15%, #eae8e2 35%, #f5f3ef 55%, #edebe5 75%, #e6e4dc 100%)`,
+              boxShadow:`0 24px 60px rgba(0,0,0,0.18), 0 6px 20px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -2px 4px rgba(0,0,0,0.04)`,
+              border:"1.5px solid rgba(0,0,0,0.06)",
+            }}>
 
-          {/* Outer neon ring */}
-          <div
-            className="absolute inset-[-2px] rounded-full z-0"
-            style={{
-              border: `1.5px solid ${currentSong.color}50`,
-              boxShadow: `0 0 20px ${currentSong.color}35, 0 0 40px ${currentSong.color}15, inset 0 0 15px ${currentSong.color}08`,
-              animation: "neonFlicker 2.5s ease-in-out infinite",
-              animationPlayState: isPlaying ? "running" : "paused",
-            }}
-          />
-
-          {/* Ambient glow behind vinyl */}
-          <div
-            className="absolute inset-[10%] rounded-full z-0 blur-2xl"
-            style={{
-              background: `radial-gradient(circle, ${currentSong.color}20 0%, transparent 70%)`,
-              animation: "neonFlicker 3s ease-in-out infinite 0.5s",
-              animationPlayState: isPlaying ? "running" : "paused",
-            }}
-          />
-
-          {/* ── MAIN VINYL DISC ── */}
-          <div
-            className="relative w-[88%] h-[88%] rounded-full z-10"
-            style={{
-              background: `
-                radial-gradient(circle at 50% 50%,
-                  #14142a 0%,
-                  #181835 2.5%,
-                  #0e0e22 6%,
-                  #14142a 6.5%,
-                  #0e0e22 11%,
-                  #14142a 11.5%,
-                  #0e0e22 16%,
-                  #14142a 16.5%,
-                  #0e0e22 20%,
-                  #14142a 20.5%,
-                  #0e0e22 24%,
-                  #14142a 24.5%,
-                  #0e0e22 28%,
-                  #14142a 28.5%,
-                  #0e0e22 31%,
-                  #14142a 31.5%,
-                  #0e0e22 35%,
-                  #14142a 35.5%,
-                  #0e0e22 39%,
-                  #14142a 39.5%,
-                  #0e0e22 42%,
-                  #14142a 42.5%,
-                  #0e0e22 46%,
-                  #14142a 46.5%,
-                  #0e0e22 50%,
-                  #14142a 50.5%,
-                  #0e0e22 54%,
-                  #14142a 54.5%,
-                  #0e0e22 58%,
-                  #14142a 58.5%,
-                  #0e0e22 61%,
-                  #0e0e22 65%,
-                  #0a0a18 100%)`,
-              boxShadow: `
-                0 0 40px ${currentSong.color}10,
-                0 0 80px ${currentSong.color}05,
-                inset 0 0 50px rgba(0,0,0,0.5),
-                inset 0 0 10px rgba(0,0,0,0.3)`,
-              animation: "vinylSpin 2s linear infinite",
-              animationPlayState: isPlaying ? "running" : "paused",
-              border: "1px solid rgba(255,255,255,0.04)",
-            }}
-          >
-            {/* Surface reflection sheen */}
-            <div
-              className="absolute inset-[4%] rounded-full opacity-[0.05] pointer-events-none"
-              style={{
-                background: `linear-gradient(135deg, #fff 0%, transparent 35%, transparent 65%, ${currentSong.color} 100%)`,
-              }}
-            />
-
-            {/* Groove accent ring */}
-            <div
-              className="absolute top-[24%] bottom-[24%] left-[24%] right-[24%] rounded-full pointer-events-none"
-              style={{
-                border: `1px solid ${currentSong.color}15`,
-                boxShadow: `0 0 6px ${currentSong.color}08`,
-              }}
-            />
-
-            {/* Inner neon groove ring */}
-            <div
-              className="absolute top-[30%] bottom-[30%] left-[30%] right-[30%] rounded-full pointer-events-none"
-              style={{
-                background: `conic-gradient(from 0deg, transparent, ${currentSong.color}12 30deg, transparent 60deg)`,
-                maskImage: "radial-gradient(circle, transparent 45%, black 46%, black 54%, transparent 55%)",
-                WebkitMaskImage: "radial-gradient(circle, transparent 45%, black 46%, black 54%, transparent 55%)",
-                animation: "vinylSpinRev 1.5s linear infinite",
-                animationPlayState: isPlaying ? "running" : "paused",
-              }}
-            />
-
-            {/* ── CENTER LABEL ── */}
-            <div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                         w-[36%] h-[36%] rounded-full flex flex-col items-center justify-center z-10 overflow-hidden"
-              style={{
-                background: `radial-gradient(circle at 40% 35%, ${currentSong.color}45 0%, ${currentSong.color}18 45%, #0a0a1a 100%)`,
-                border: `2px solid ${currentSong.color}50`,
-                boxShadow: `0 0 20px ${currentSong.color}25, 0 0 35px ${currentSong.color}08, inset 0 0 10px rgba(0,0,0,0.3)`,
-              }}
-            >
-              {/* Label gloss */}
-              <div
-                className="absolute inset-0 rounded-full opacity-[0.15] pointer-events-none"
-                style={{ background: "linear-gradient(135deg, #fff 0%, transparent 55%)" }}
-              />
-
-              {/* AI badge */}
-              <span
-                className="relative text-[7px] font-bold tracking-[0.22em] uppercase text-white/50 mb-0.5"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                AI Generated
+            {/* LOGO */}
+            <div className="absolute top-0 left-0 right-0 h-[10%] flex items-end justify-between px-5 pb-1.5"
+              style={{borderBottom:"1px solid rgba(0,0,0,0.04)"}}>
+              <span className="text-[13px] sm:text-[15px] font-black tracking-tight italic"
+                style={{color:"#2a2a2a",fontFamily:"'Syne','Instrument Sans',sans-serif",letterSpacing:"-0.02em"}}>
+                WALKMAN
               </span>
-
-              {/* Title */}
-              <span
-                className="relative text-[10px] sm:text-[11px] font-bold text-white/95 tracking-wide text-center leading-tight px-3"
-                style={{ fontFamily: "'Syne', sans-serif" }}
-              >
-                {currentSong.title}
-              </span>
-
-              {/* Artist */}
-              <span className="relative text-[7px] sm:text-[7px] text-white/35 mt-1 tracking-wider text-center px-3">
-                {currentSong.artist}
-              </span>
-
-              {/* Center spindle hole */}
-              <div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[10%] h-[10%] rounded-full"
-                style={{
-                  background: "#060610",
-                  border: `1px solid ${currentSong.color}25`,
-                  boxShadow: "inset 0 0 4px rgba(0,0,0,0.6)",
-                }}
-              />
+              <span className="text-[7px] font-semibold tracking-[0.25em] uppercase"
+                style={{color:"rgba(0,0,0,0.25)"}}>STEREO · AUTO REVERSE</span>
             </div>
 
-            {/* Glitch slice overlay */}
-            <div
-              className="absolute inset-0 rounded-full overflow-hidden pointer-events-none opacity-[0.04]"
-              style={{
-                background: `linear-gradient(to bottom, ${currentSong.color}, transparent 30%, ${currentSong.color} 60%, transparent)`,
-                animation: isPlaying ? "dataScan 3s linear infinite" : "none",
-              }}
-            />
+            {/* 磁带仓 */}
+            <div className="absolute top-[12%] left-[6%] right-[6%] h-[50%] rounded-[14px] overflow-hidden"
+              style={{background:"#c8dae8",border:"3px solid rgba(0,0,0,0.10)",boxShadow:"inset 0 4px 16px rgba(0,0,0,0.12), 0 2px 0 rgba(255,255,255,0.5)"}}>
+
+              {/* ── 逼真复古磁带 ── */}
+              <div className="absolute inset-[2%] rounded-[5px]"
+                style={{background:"#f0d878",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 3px rgba(0,0,0,0.08)"}}>
+
+                {/* 上方大标签纸 */}
+                <div className="absolute top-[3%] left-[5%] right-[5%] h-[38%] rounded-[3px] flex flex-col items-center justify-center"
+                  style={{background:"rgba(255,255,255,0.55)",border:"1px solid rgba(0,0,0,0.06)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.5)"}}>
+                  <span className="text-[7px] sm:text-[8px] font-bold text-center leading-tight px-3"
+                    style={{color:"#3a2a10",fontFamily:"'Syne','Instrument Sans',sans-serif"}}>
+                    {currentSong.title}
+                  </span>
+                  <span className="text-[5px] mt-0.5 font-medium uppercase tracking-[0.1em]"
+                    style={{color:"rgba(0,0,0,0.4)"}}>AI MUSIC · STEREO</span>
+                </div>
+
+                {/* 左视窗 — 透明塑料 + 磁带卷 */}
+                <div className="absolute top-[50%] -translate-y-1/2 flex items-center justify-center"
+                  style={{left:"16%",width:"25%",aspectRatio:"1"}}>
+                  {/* 透明视窗 */}
+                  <div className="w-full h-full rounded-full flex items-center justify-center"
+                    style={{background:"rgba(180,190,200,0.20)",border:"2px solid rgba(0,0,0,0.12)",boxShadow:"inset 0 0 6px rgba(0,0,0,0.08)"}}>
+                    {/* 白色塑料轮毂 */}
+                    <div className="w-[78%] h-[78%] rounded-full flex items-center justify-center"
+                      style={{background:"#dce2e6",animation:"vinylSpin 1.3s linear infinite",animationPlayState:isPlaying?"running":"paused"}}>
+                      {/* 轮毂凹槽环 */}
+                      <div className="w-[85%] h-[85%] rounded-full" style={{background:"#ddd6c8",border:"1px solid rgba(0,0,0,0.06)"}}/>
+                      {/* 6 辐条 */}
+                      {[0,1,2,3,4,5].map(i=>(<div key={i} className="absolute w-0.5 bg-black/8 rounded-full" style={{height:"50%",transform:`rotate(${i*60}deg)`}}/>))}
+                      {/* 中心轴孔 */}
+                      <div className="absolute w-[22%] h-[22%] rounded-full flex items-center justify-center" style={{background:"#d0c8b8",border:"0.5px solid rgba(0,0,0,0.1)"}}>
+                        <div className="w-[35%] h-[35%] rounded-full" style={{background:"rgba(0,0,0,0.2)"}}/>
+                      </div>
+                    </div>
+                  </div>
+                  {/* 缠绕的磁带（遮罩环） */}
+                  <div className="absolute inset-[11%] rounded-full border-[3px] pointer-events-none"
+                    style={{borderColor:`${glow}10`,opacity:0.3}}/>
+                </div>
+
+                {/* 右视窗 — 透明塑料 + 磁带卷 */}
+                <div className="absolute top-[50%] -translate-y-1/2 flex items-center justify-center"
+                  style={{right:"16%",width:"25%",aspectRatio:"1"}}>
+                  <div className="w-full h-full rounded-full flex items-center justify-center"
+                    style={{background:"rgba(180,190,200,0.20)",border:"2px solid rgba(0,0,0,0.12)",boxShadow:"inset 0 0 6px rgba(0,0,0,0.08)"}}>
+                    <div className="w-[78%] h-[78%] rounded-full flex items-center justify-center"
+                      style={{background:"#dce2e6",animation:"vinylSpin 1.5s linear infinite",animationPlayState:isPlaying?"running":"paused"}}>
+                      <div className="w-[85%] h-[85%] rounded-full" style={{background:"#ddd6c8",border:"1px solid rgba(0,0,0,0.06)"}}/>
+                      {[0,1,2,3,4,5].map(i=>(<div key={i} className="absolute w-0.5 bg-black/8 rounded-full" style={{height:"50%",transform:`rotate(${i*60}deg)`}}/>))}
+                      <div className="absolute w-[22%] h-[22%] rounded-full flex items-center justify-center" style={{background:"#d0c8b8",border:"0.5px solid rgba(0,0,0,0.1)"}}>
+                        <div className="w-[35%] h-[35%] rounded-full" style={{background:"rgba(0,0,0,0.2)"}}/>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 底部：磁头开口 + 铜色压带垫 */}
+                <div className="absolute bottom-[8%] left-[34%] right-[34%]">
+                  <div className="w-full h-[12px] rounded-[2px] flex items-center justify-center"
+                    style={{background:"#1a1208",border:"0.5px solid rgba(0,0,0,0.2)"}}>
+                    {/* 金色磁头片 */}
+                    <div className="w-[25%] h-[35%] rounded-[1px]" style={{background:"#c8a850",border:"0.5px solid rgba(0,0,0,0.15)"}}/>
+                  </div>
+                </div>
+              </div>
+
+              {/* 玻璃反光 */}
+              <div className="absolute top-0 left-0 w-[35%] h-[35%] pointer-events-none"
+                style={{background:"linear-gradient(135deg, rgba(255,255,255,0.35) 0%, transparent 100%)",borderRadius:"14px 0 100% 0"}}/>
+            </div>
+
+            {/* 歌曲信息 */}
+            <div className="absolute top-[65%] left-[8%] right-[8%] text-center">
+              <p className="text-[14px] sm:text-[16px] font-bold leading-tight"
+                style={{color:"#2a2a2a",fontFamily:"-apple-system,'SF Pro Display','PingFang SC',sans-serif"}}>
+                {currentSong.title}
+              </p>
+              <p className="text-[10px] sm:text-[11px] mt-1" style={{color:"rgba(0,0,0,0.4)"}}>{currentSong.artist}</p>
+            </div>
+
+            {/* Walkman 按键 */}
+            <div className="absolute bottom-[6%] left-[10%] right-[10%] h-[13%] flex items-center justify-center gap-5 sm:gap-6"
+              style={{borderTop:"1px solid rgba(0,0,0,0.05)"}}>
+              <button onClick={(e)=>{e.stopPropagation();prev()}}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                style={{background:"#e8e4dc",border:"1.5px solid rgba(0,0,0,0.1)",boxShadow:"0 2px 4px rgba(0,0,0,0.06)"}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(0,0,0,0.4)"><polygon points="6,12 18,2 18,22"/><rect x="2" y="4" width="4" height="16"/></svg>
+              </button>
+              <button onClick={(e)=>{e.stopPropagation();togglePlay()}}
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                style={{background:`linear-gradient(135deg,${glow},${glow}88)`,boxShadow:`0 4px 16px ${glow}30, 0 1px 3px rgba(0,0,0,0.1)`}}>
+                {isPlaying?(
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/></svg>
+                ):(
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff" className="ml-0.5"><polygon points="6,2 20,12 6,22"/></svg>
+                )}
+              </button>
+              <button onClick={(e)=>{e.stopPropagation();next()}}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                style={{background:"#e8e4dc",border:"1.5px solid rgba(0,0,0,0.1)",boxShadow:"0 2px 4px rgba(0,0,0,0.06)"}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(0,0,0,0.4)"><polygon points="6,2 18,12 6,22"/><rect x="18" y="4" width="4" height="16"/></svg>
+              </button>
+            </div>
+
+            <span className="absolute bottom-2 left-0 right-0 text-center text-[7px]"
+              style={{color:"rgba(0,0,0,0.15)",fontFamily:"'Space Grotesk',sans-serif"}}>WM-AI1 · AI MUSIC PLAYER</span>
           </div>
-
-          {/* ── ORBITING PARTICLES ── */}
-          {Array.from({ length: 8 }).map((_, i) => {
-            const angle = (i * Math.PI * 2) / 8
-            const r = 50
-            return (
-              <div
-                key={`p${i}`}
-                className="absolute rounded-full z-20 pointer-events-none"
-                style={{
-                  width: "3px",
-                  height: "3px",
-                  background: i % 2 === 0 ? currentSong.color : "#00f5d4",
-                  boxShadow: `0 0 7px ${i % 2 === 0 ? currentSong.color : "#00f5d4"}, 0 0 14px ${i % 2 === 0 ? currentSong.color : "#00f5d4"}70`,
-                  "--orbit-angle": `${angle}rad`,
-                  "--orbit-r": r,
-                  top: `${50 + Math.sin(angle) * r}%`,
-                  left: `${50 + Math.cos(angle) * r}%`,
-                  animation: `orbitPulse ${2 + i * 0.4}s ease-in-out infinite`,
-                  animationPlayState: isPlaying ? "running" : "paused",
-                  animationDelay: `${i * 0.2}s`,
-                }}
-              />
-            )
-          })}
-
-          {/* ── EQUALIZER RING ── */}
-          {Array.from({ length: 28 }).map((_, i) => {
-            const angle = (i * 360) / 28
-            const rad = (angle * Math.PI) / 180
-            const barH = 6 + (i % 5) * 2.5
-            return (
-              <div
-                key={`eq${i}`}
-                className="absolute z-20 pointer-events-none"
-                style={{
-                  width: "2px",
-                  height: `${barH}px`,
-                  background: `linear-gradient(to top, ${currentSong.color}90, transparent)`,
-                  boxShadow: `0 0 5px ${currentSong.color}50`,
-                  borderRadius: "1px",
-                  top: `${50 + Math.sin(rad) * 53}%`,
-                  left: `${50 + Math.cos(rad) * 53}%`,
-                  transform: `translate(-50%, -50%) rotate(${angle + 90}deg) translateY(-48%)`,
-                  animation: isPlaying ? `eqBounce ${0.6 + (i % 4) * 0.15}s ease-in-out infinite` : "none",
-                  animationDelay: `${i * 0.04}s`,
-                  opacity: 0.55,
-                }}
-              />
-            )
-          })}
-
-          {/* AI badge floating outside */}
-          <span
-            className="absolute top-1 right-4 z-30 px-2.5 py-1 text-[10px] font-semibold tracking-wider uppercase rounded-full
-                       bg-black/60 backdrop-blur-md border border-white/10 text-purple-300"
-            style={{ animation: "neonFlicker 3s ease-in-out infinite 1s" }}
-          >
-            AI 创作
-          </span>
-
-          {/* Genre tag floating outside */}
-          <span
-            className="absolute bottom-2 right-4 z-30 px-2.5 py-1 text-[10px] rounded-full
-                       bg-white/5 backdrop-blur-md border border-white/10 text-cyan-300"
-          >
-            {currentSong.genre}
-          </span>
         </div>
 
-        {/* Lyrics area */}
-        <div className="flex-1 w-full max-w-lg lg:max-w-xl h-full min-h-0 overflow-hidden flex flex-col">
-          {/* Song info */}
-          <div className="text-center lg:text-left mb-4 shrink-0">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white/90 tracking-tight">
+        {/* 右侧面板 */}
+        <div className="flex-1 w-full max-w-lg lg:max-w-xl min-h-0 flex flex-col rounded-2xl overflow-hidden"
+          style={{background:"rgba(255,255,255,0.03)",backdropFilter:"blur(30px)",WebkitBackdropFilter:"blur(30px)",border:"1px solid rgba(255,255,255,0.05)"}}>
+
+          <div className="px-5 pt-5 pb-1 shrink-0">
+            <h2 className="text-xl sm:text-2xl font-bold text-white/95 tracking-tight"
+              style={{fontFamily:"-apple-system,'SF Pro Display','PingFang SC',sans-serif"}}>
               {currentSong.title}
             </h2>
-            <p className="text-white/40 mt-1">{currentSong.artist}</p>
+            <div className="flex items-center gap-2 mt-0.5 text-[12px] text-white/35 flex-wrap">
+              <span>{currentSong.artist}</span><span>·</span><span>{currentSong.genre}</span>
+              {duration>0&&<><span>·</span><span>{Math.floor(duration/60)} 分钟</span></>}
+            </div>
           </div>
 
-          {/* Lyrics scroll */}
-          <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-3 text-center lg:text-left lyrics-scroll px-2">
-            {lyrics.map((line, i) => {
-              const isPast = i < currentLyricIndex
-              const isCurrent = i === currentLyricIndex
-              return (
-                <p
-                  key={i}
-                  className={`transition-all duration-500 text-lg leading-relaxed
-                    ${isCurrent
-                      ? "text-white font-semibold text-2xl scale-105"
-                      : isPast
-                        ? "text-white/30"
-                        : "text-white/15"
-                    }`}
-                >
-                  {isCurrent && (
-                    <span className="inline-block w-1.5 h-6 bg-gradient-to-b from-purple-400 to-cyan-400 rounded-full mr-3 align-middle" />
-                  )}
-                  {line.text}
-                </p>
-              )
-            })}
-            <div className="h-32" />
+          <div className="flex gap-1 px-5 mt-1 mb-1 shrink-0">
+            {["lyrics","comments"].map(t=>(
+              <button key={t} onClick={()=>setViewTab(t)}
+                className={`px-4 py-1.5 text-[13px] font-medium rounded-full transition-all ${viewTab===t?"text-white":"text-white/25 hover:text-white/45"}`}
+                style={{background:viewTab===t?"rgba(255,255,255,0.10)":"transparent"}}>
+                {t==="lyrics"?"歌词":`评论${currentSong.comments?.length>0?` (${currentSong.comments.length})`:""}`}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 min-h-0 px-5 pb-4" style={{overflow:"hidden"}}>
+            {viewTab==="lyrics"?(
+              <div ref={lyricsOuterRef} style={{height:"100%",overflow:"hidden"}}>
+                <div ref={lyricsInnerRef} className="flex flex-col items-center lg:items-start"
+                  style={{gap:"0.75rem",transition:"transform 0.2s linear"}}>
+                  {lyrics.map((l,i)=>(
+                    <p key={i} data-d={i} className={`transition-all duration-500 leading-relaxed ${i===smoothLyricIdx?"text-white/90 font-bold text-lg":"text-white/20 text-sm"}`}
+                      style={{fontFamily:"-apple-system,'PingFang SC',sans-serif"}}>{l.text}</p>
+                  ))}
+                  <div style={{height:"12rem"}}/>
+                </div>
+              </div>
+            ):(
+              <div className="h-full overflow-y-auto lyrics-scroll">
+                <CommentSection songId={currentSong.id} comments={currentSong.comments||[]}/>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Bottom controls */}
-      <div className="relative z-10 px-6 py-4 bg-gradient-to-t from-black/60 to-transparent backdrop-blur-xl">
-        {/* Progress bar */}
-        <div
-          className="relative h-1.5 bg-white/8 rounded-full cursor-pointer group/progress mb-4"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect()
-            seek((e.clientX - rect.left) / rect.width * duration)
-          }}
-        >
-          <div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 to-cyan-400 rounded-full transition-all duration-200"
-            style={{ width: `${progress}%` }}
-          />
-          <div
-            className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white shadow-lg shadow-purple-500/50 opacity-0 group-hover/progress:opacity-100 transition-opacity"
-            style={{ left: `calc(${progress}% - 8px)` }}
-          />
+      {/* 底部控制 */}
+      <div className="relative z-10 px-6 pt-2 pb-5"
+        style={{background:"rgba(255,255,255,0.03)",backdropFilter:"blur(40px)",WebkitBackdropFilter:"blur(40px)",borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+        <div className="relative h-[3px] rounded-full cursor-pointer group/progress mb-3" style={{background:"rgba(255,255,255,0.06)"}}
+          onClick={e=>{const r=e.currentTarget.getBoundingClientRect();seek((e.clientX-r.left)/r.width*duration)}}>
+          <div className="absolute inset-y-0 left-0 rounded-full" style={{width:`${progress}%`,background:`linear-gradient(90deg,${glow},${glow}88)`}}/>
+          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity" style={{left:`${progress}%`}}/>
         </div>
-
-        {/* Time */}
-        <div className="flex items-center justify-between mb-4 text-xs text-white/35 font-mono">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
+        <div className="flex items-center justify-between mb-3 text-[11px] text-white/20" style={{fontFamily:"'SF Mono',monospace"}}>
+          <span>{fmt(currentTime)}</span><span>{fmt(duration)}</span>
         </div>
-
-        {/* Controls row */}
         <div className="flex items-center justify-between">
-          {/* Volume */}
-          <div className="hidden sm:flex items-center gap-2 w-40">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/30 shrink-0">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-              {volume > 0 && <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />}
-              {volume > 0.5 && <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />}
-            </svg>
-            <input
-              type="range"
-              min="0" max="1" step="0.01"
-              value={volume}
-              onChange={(e) => changeVolume(parseFloat(e.target.value))}
-              className="w-20"
-            />
+          <div className="hidden sm:flex items-center gap-2 w-28">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>{volume>0&&<path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>}</svg>
+            <input type="range" min="0" max="1" step="0.01" value={volume} onChange={e=>changeVolume(parseFloat(e.target.value))} className="w-20"/>
           </div>
-
-          {/* Play controls */}
-          <div className="flex items-center gap-6 mx-auto">
-            <button onClick={prev} className="text-white/40 hover:text-white/80 transition-colors">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <polygon points="6,12 18,2 18,22" />
-                <rect x="2" y="4" width="4" height="16" />
-              </svg>
+          <div className="flex items-center gap-8 mx-auto">
+            <button onClick={prev} className="text-white/30 hover:text-white/60"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,12 18,2 18,22"/><rect x="2" y="4" width="4" height="16" rx="1"/></svg></button>
+            <button onClick={togglePlay} className="w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95" style={{background:`linear-gradient(135deg,${glow},${glow}88)`}}>
+              {isPlaying?<svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>:<svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" className="ml-0.5"><polygon points="6,2 20,12 6,22"/></svg>}
             </button>
-
-            <button
-              onClick={togglePlay}
-              className="w-14 h-14 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/20 transition-all hover:scale-105 shadow-lg shadow-purple-500/20"
-            >
-              {isPlaying ? (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-                  <rect x="6" y="4" width="4" height="16" rx="1" />
-                  <rect x="14" y="4" width="4" height="16" rx="1" />
-                </svg>
-              ) : (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="white" className="ml-1">
-                  <polygon points="6,2 20,12 6,22" />
-                </svg>
-              )}
-            </button>
-
-            <button onClick={next} className="text-white/40 hover:text-white/80 transition-colors">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <polygon points="6,2 18,12 6,22" />
-                <rect x="18" y="4" width="4" height="16" />
-              </svg>
-            </button>
+            <button onClick={next} className="text-white/30 hover:text-white/60"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,2 18,12 6,22"/><rect x="18" y="4" width="4" height="16" rx="1"/></svg></button>
           </div>
-
-          {/* Spacer */}
-          <div className="w-40 hidden sm:block" />
+          <div className="w-28 hidden sm:block"/>
         </div>
       </div>
     </div>
