@@ -51,17 +51,33 @@ export default function FullscreenPlayer() {
     return Array.isArray(raw)?raw:[]
   },[currentSong?.lyrics,currentSong?.duration])
 
-  // 歌词滚动 — 每次 tick 重新测量容器高度和行间距（兼容手机端布局变化）
+  // 切歌时重置滚动位置
   useEffect(() => {
-    if (!isPlaying || !lyrics.length) return
-    const outer = lyricsOuterRef.current
     const inner = lyricsInnerRef.current
-    if (!outer || !inner) return
+    if (inner) {
+      inner.style.transform = 'translateY(0px)'
+    }
+    setSmoothLyricIdx(-1)
+  }, [currentSong?.id])
+
+  // 歌词滚动核心逻辑（用 ref 存，方便 isPlaying 触发时调用）
+  const scrollRef = useRef(null)
+
+  // 歌词滚动 — setInterval 轮询 + timeupdate 事件双驱动
+  useEffect(() => {
+    if (!lyrics.length) return
+    const audio = audioRef?.current
+    if (!audio) return
+
     let lastIdx = -2
+    let interval = 0
 
     const tick = () => {
-      const a = audioRef?.current
-      if (!a || a.paused) return
+      const outer = lyricsOuterRef.current
+      const inner = lyricsInnerRef.current
+      if (!outer || !inner) return
+      if (audio.paused) return
+
       const h = outer.clientHeight
       if (!h || h < 20) return
       const c0 = inner.querySelector('[data-d="0"]')
@@ -72,7 +88,7 @@ export default function FullscreenPlayer() {
 
       let idx = -1
       for (let i = lyrics.length - 1; i >= 0; i--) {
-        if (a.currentTime >= lyrics[i].time) { idx = i; break }
+        if (audio.currentTime >= lyrics[i].time) { idx = i; break }
       }
       if (idx >= 0 && idx !== lastIdx) {
         lastIdx = idx
@@ -82,13 +98,30 @@ export default function FullscreenPlayer() {
       }
     }
 
+    scrollRef.current = tick
+
+    const onTimeUpdate = () => tick()
+    audio.addEventListener('timeupdate', onTimeUpdate)
+    interval = setInterval(tick, 250)
+    // 立即尝试一次（此时音频可能还没开始播，tick 内 audio.paused 会拦掉）
     tick()
-    const id = setInterval(tick, 250)
+
     return () => {
-      clearInterval(id)
-      inner.style.transform = 'translateY(0px)'
+      audio.removeEventListener('timeupdate', onTimeUpdate)
+      clearInterval(interval)
+      scrollRef.current = null
     }
-  }, [isPlaying, currentSong?.id, lyrics.length, audioRef])
+  }, [currentSong?.id, lyrics, audioRef])
+
+  // 音频开始播放时强制触发滚动（解决初次打开时 play() 异步未完成、tick 被 paused 拦截）
+  useEffect(() => {
+    if (!isPlaying || !scrollRef.current) return
+    // rAF 确保 DOM 布局完成后再读取 clientHeight（手机端 flex 布局可能滞后）
+    const raf = requestAnimationFrame(() => {
+      if (scrollRef.current) scrollRef.current()
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [isPlaying])
 
   if(!isFullscreen||!currentSong)return null
 

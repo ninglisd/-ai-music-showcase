@@ -45,8 +45,11 @@ export function PlayerProvider({ children, songs = [], toggleLike, addComment })
       audio.pause()
       setIsPlaying(false)
     } else {
-      audio.play()
-      setIsPlaying(true)
+      audio.play().then(() => {
+        setIsPlaying(true)
+      }).catch(() => {
+        // 移动端自动播放被拦截，保持暂停状态
+      })
     }
   }, [isPlaying])
 
@@ -113,7 +116,7 @@ export function PlayerProvider({ children, songs = [], toggleLike, addComment })
     const onEnded = () => {
       setIsPlaying(false)
       if (playModeRef.current === "REPEAT_ONE") {
-        if (audio) { audio.currentTime = 0; audio.play() }
+        if (audio) { audio.currentTime = 0; audio.play().catch(() => {}) }
       } else if (playModeRef.current === "NORMAL" && currentIndex >= songs.length - 1) {
         // Stop at end in NORMAL mode
       } else {
@@ -147,7 +150,10 @@ export function PlayerProvider({ children, songs = [], toggleLike, addComment })
     if (!currentSong || !audioRef.current) return
     const audio = audioRef.current
     audio.src = currentSong.audio
-    audio.play()
+    audio.play().catch(() => {
+      // 移动端自动播放被拦截时，不强制播放，等用户手动触发
+      setIsPlaying(false)
+    })
   }, [currentIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync volume changes to audio element
