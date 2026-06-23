@@ -88,8 +88,10 @@ const songPalettes = {
   "莎莉花园":     { bg: ["#3d2010", "#5c3a1a", "#4a2a10", "#2a1808"], accent: "#e0a030" },
   "二十亿光年的孤独": { bg: ["#0a1030", "#151d50", "#0d1440", "#121848"], accent: "#4080ff" },
   "我想成为这样的人": { bg: ["#2d2510", "#3d3818", "#2a200c", "#1a1808"], accent: "#e0c040" },
-  "破阵乐":       { bg: ["#3d0a0a", "#5c1010", "#2d0000", "#1a0505"], accent: "#e84020" },
-  "破阵子":       { bg: ["#3d0a0a", "#5c1010", "#2d0000", "#1a0505"], accent: "#e84020" },
+  "破阵乐":              { bg: ["#3d0a0a", "#5c1010", "#2d0000", "#1a0505"], accent: "#e84020" },
+  "破阵子":              { bg: ["#3d0a0a", "#5c1010", "#2d0000", "#1a0505"], accent: "#e84020" },
+  "Broken Forever":      { bg: ["#f5e000", "#f0d000", "#e5c000", "#c4a800"], accent: "#f5e000" },
+  "Right Where I'm Posed To Be": { bg: ["#c41e1e", "#a01818", "#801010", "#500808"], accent: "#ffffff" },
 }
 
 const defaultPalette = { bg: ["#1a1a2e", "#2d1b4e", "#1a1a3e", "#251845"], accent: "#8b5cf6" }
@@ -513,6 +515,128 @@ function AnimatedPattern({ song }) {
         <polygon points={`${lx - lw * 0.5},${ly - lh/2 - 4} ${lx + lw * 0.5},${ly - lh/2 - 4} ${lx},${ly - lh/2 - 9}`}
           fill="#e63946" opacity="0.45" />
         <circle cx={lx} cy={ly - lh/2 - 10} r="1" fill="rgba(255,255,255,0.6)" />
+      </svg>
+    )
+  }
+
+  /* Broken Forever — 黄色梨 */
+  if (title === "Broken Forever") {
+    return (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="pear-grad" x1="30%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" stopColor="#f8f0a0" />
+            <stop offset="15%" stopColor="#f2e250" />
+            <stop offset="45%" stopColor="#e8d420" />
+            <stop offset="75%" stopColor="#d4c010" />
+            <stop offset="100%" stopColor="#b8a008" />
+          </linearGradient>
+          <radialGradient id="pear-shine" cx="35%" cy="20%" r="35%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.45)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </radialGradient>
+        </defs>
+        {/* 梨主体 — 上窄下宽 */}
+        <g transform="translate(48,48) scale(0.65)">
+          {/* 主体轮廓 */}
+          <path d="
+            M 0 -36
+            C -8 -36, -16 -30, -20 -20
+            C -26 -8, -30 8, -28 20
+            C -26 30, -18 38, -6 40
+            C 6 42, 18 38, 24 28
+            C 30 18, 28 0, 22 -12
+            C 16 -24, 8 -34, 0 -36 Z"
+            fill="url(#pear-grad)" opacity="0.90" />
+          {/* 外轮廓线 */}
+          <path d="
+            M 0 -36
+            C -8 -36, -16 -30, -20 -20
+            C -26 -8, -30 8, -28 20
+            C -26 30, -18 38, -6 40
+            C 6 42, 18 38, 24 28
+            C 30 18, 28 0, 22 -12
+            C 16 -24, 8 -34, 0 -36 Z"
+            fill="none" stroke="#8a7a08" strokeWidth="1.3" opacity="0.4" />
+          {/* 高光 */}
+          <path d="M -10 -26 C -16 -10, -16 8, -10 22 C -6 28, 0 30, 4 28"
+            fill="url(#pear-shine)" />
+          {/* 蒂 — 深棕色细柄 */}
+          <line x1="0" y1="-36" x2="2" y2="-46" stroke="#3a2a0a" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+          {/* 底部小凹 */}
+          <circle cx="2" cy="38" r="1.5" fill="#8a7a08" opacity="0.3" />
+          {/* 斑点 */}
+          <circle cx="-16" cy="0" r="0.6" fill="#8a7a08" opacity="0.16" />
+          <circle cx="10" cy="10" r="0.5" fill="#8a7a08" opacity="0.14" />
+          <circle cx="-6" cy="-10" r="0.5" fill="#8a7a08" opacity="0.12" />
+        </g>
+      </svg>
+    )
+  }
+
+  /* Right Where I'm Posed To Be — 万宝路香烟盒 */
+  if (title === "Right Where I'm Posed To Be") {
+    return (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="mred2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#dd3030" />
+            <stop offset="35%" stopColor="#c91e1e" />
+            <stop offset="70%" stopColor="#a81818" />
+            <stop offset="100%" stopColor="#7a0e0e" />
+          </linearGradient>
+          <linearGradient id="mgold2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#c89820" />
+            <stop offset="50%" stopColor="#ecc850" />
+            <stop offset="100%" stopColor="#a07810" />
+          </linearGradient>
+        </defs>
+        {/* 烟盒 */}
+        <g transform="translate(50,48) scale(0.46)">
+          {/* 红色盒体 */}
+          <rect x="-38" y="-62" width="76" height="124" rx="4"
+            fill="url(#mred2)" opacity="0.94" />
+          {/* 盒边光照 */}
+          <rect x="-38" y="-62" width="76" height="124" rx="4"
+            fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.8" />
+          {/* 白色屋顶 — 经典的 Marlboro 倒V形白色区域: 从底部角落斜向上升到顶部中央 */}
+          <path d="M -36 -58 L -36 12 L 0 -48 L 36 12 L 36 -58 Z"
+            fill="rgba(252,252,250,0.93)" />
+          {/* 屋顶上沿金色细线 */}
+          <path d="M -36 -56 L 0 -46 L 36 -56"
+            fill="none" stroke="url(#mgold2)" strokeWidth="0.6" opacity="0.7" />
+          {/* 屋顶下沿金色细线 */}
+          <path d="M -36 10 L 0 -46 L 36 10"
+            fill="none" stroke="url(#mgold2)" strokeWidth="0.6" opacity="0.6" />
+          {/* Marlboro 文字 — 紧凑serif, 位于白色屋顶区域 */}
+          <text x="0" y="-8" textAnchor="middle"
+            fill="#1a1a1a" fontSize="10" fontWeight="900" letterSpacing="2"
+            fontFamily="'Georgia','Times New Roman','Palatino',serif">
+            Marlboro
+          </text>
+          {/* 白色横条 — 中部 */}
+          <rect x="-34" y="18" width="68" height="4" rx="1.5"
+            fill="rgba(252,252,250,0.90)" />
+          {/* 底部金色横条 */}
+          <rect x="-36" y="42" width="72" height="7" rx="2"
+            fill="url(#mgold2)" opacity="0.85" />
+          {/* 金色横条上细线 */}
+          <line x1="-32" y1="45" x2="32" y2="45" stroke="rgba(255,255,255,0.3)" strokeWidth="0.4" />
+          {/* 侧面高光 */}
+          <line x1="36" y1="-60" x2="36" y2="60" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
+        </g>
+        {/* 飘烟 */}
+        {[0,1,2,3].map(i => (
+          <g key={`mks-${i}`}>
+            <path d={`M ${44 + i * 8} ${34 - i * 5}
+                     Q ${48 + i * 5} ${24 - i * 6}
+                       ${42 + i * 7} ${14 - i * 8}`}
+              fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="1.3" strokeLinecap="round">
+              <animate attributeName="opacity" values="0.16;0.03;0.16" dur={`${4 + i * 0.7}s`} repeatCount="indefinite" begin={`${i * 0.8}s`} />
+              <animateTransform attributeName="transform" type="translate" values={`0,0; 2,-6; -1,-14`} dur={`${4 + i * 0.8}s`} repeatCount="indefinite" begin={`${i * 0.5}s`} />
+            </path>
+          </g>
+        ))}
       </svg>
     )
   }
