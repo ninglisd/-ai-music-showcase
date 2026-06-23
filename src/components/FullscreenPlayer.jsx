@@ -1,6 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react"
 import { usePlayer } from "../context/PlayerContext"
-import CommentSection from "./CommentSection"
 
 function fmt(s) { const m=Math.floor(Math.max(0,s)/60); return `${m}:${(Math.floor(Math.max(0,s))%60).toString().padStart(2,"0")}` }
 
@@ -34,94 +32,7 @@ function autoGrad(title) {
 
 export default function FullscreenPlayer() {
   const { currentSong, isPlaying, currentTime, duration, volume,
-    isFullscreen, togglePlay, next, prev, seek, changeVolume, closeFullscreen, toggleLike, audioRef } = usePlayer()
-  const [viewTab, setViewTab] = useState("lyrics")
-  const [smoothLyricIdx, setSmoothLyricIdx] = useState(-1)
-  const lyricsOuterRef = useRef(null)
-  const lyricsInnerRef = useRef(null)
-
-  const lyrics = useMemo(() => {
-    const raw = currentSong?.lyrics
-    if (typeof raw === "string") {
-      const lines = raw.split("\n").filter(l=>l.trim())
-      const dur = currentSong?.duration||240
-      const gap = dur/(lines.length+1)
-      return lines.map((t,i)=>({time:gap*(i+1),text:t}))
-    }
-    return Array.isArray(raw)?raw:[]
-  },[currentSong?.lyrics,currentSong?.duration])
-
-  // 切歌时重置滚动位置
-  useEffect(() => {
-    const inner = lyricsInnerRef.current
-    if (inner) {
-      inner.style.transform = 'translateY(0px)'
-    }
-    setSmoothLyricIdx(-1)
-  }, [currentSong?.id])
-
-  // 歌词滚动核心逻辑（用 ref 存，方便 isPlaying 触发时调用）
-  const scrollRef = useRef(null)
-
-  // 歌词滚动 — setInterval 轮询 + timeupdate 事件双驱动
-  useEffect(() => {
-    if (!lyrics.length) return
-    const audio = audioRef?.current
-    if (!audio) return
-
-    let lastIdx = -2
-    let interval = 0
-
-    const tick = () => {
-      const outer = lyricsOuterRef.current
-      const inner = lyricsInnerRef.current
-      if (!outer || !inner) return
-      if (audio.paused) return
-
-      const h = outer.clientHeight
-      if (!h || h < 20) return
-      const c0 = inner.querySelector('[data-d="0"]')
-      const c1 = inner.querySelector('[data-d="1"]')
-      if (!c0 || !c1) return
-      const unit = c1.offsetTop - c0.offsetTop
-      if (unit <= 0) return
-
-      let idx = -1
-      for (let i = lyrics.length - 1; i >= 0; i--) {
-        if (audio.currentTime >= lyrics[i].time) { idx = i; break }
-      }
-      if (idx >= 0 && idx !== lastIdx) {
-        lastIdx = idx
-        const offset = h * 0.35 - idx * unit
-        inner.style.transform = 'translateY(' + offset + 'px)'
-        setSmoothLyricIdx(idx)
-      }
-    }
-
-    scrollRef.current = tick
-
-    const onTimeUpdate = () => tick()
-    audio.addEventListener('timeupdate', onTimeUpdate)
-    interval = setInterval(tick, 250)
-    // 立即尝试一次（此时音频可能还没开始播，tick 内 audio.paused 会拦掉）
-    tick()
-
-    return () => {
-      audio.removeEventListener('timeupdate', onTimeUpdate)
-      clearInterval(interval)
-      scrollRef.current = null
-    }
-  }, [currentSong?.id, lyrics, audioRef])
-
-  // 音频开始播放时强制触发滚动（解决初次打开时 play() 异步未完成、tick 被 paused 拦截）
-  useEffect(() => {
-    if (!isPlaying || !scrollRef.current) return
-    // rAF 确保 DOM 布局完成后再读取 clientHeight（手机端 flex 布局可能滞后）
-    const raf = requestAnimationFrame(() => {
-      if (scrollRef.current) scrollRef.current()
-    })
-    return () => cancelAnimationFrame(raf)
-  }, [isPlaying])
+    isFullscreen, togglePlay, next, prev, seek, changeVolume, closeFullscreen } = usePlayer()
 
   if(!isFullscreen||!currentSong)return null
 
@@ -261,48 +172,6 @@ export default function FullscreenPlayer() {
           </div>
         </div>
 
-        {/* 右侧面板 */}
-        <div className="flex-1 w-full max-w-lg lg:max-w-xl min-h-0 flex flex-col rounded-2xl overflow-hidden"
-          style={{background:"rgba(255,255,255,0.03)",backdropFilter:"blur(30px)",WebkitBackdropFilter:"blur(30px)",border:"1px solid rgba(255,255,255,0.05)"}}>
-
-          <div className="px-5 pt-5 pb-1 shrink-0">
-            <h2 className="text-xl sm:text-2xl font-bold text-white/95 tracking-tight"
-              style={{fontFamily:"-apple-system,'SF Pro Display','PingFang SC',sans-serif"}}>{currentSong.title}</h2>
-            <div className="flex items-center gap-2 mt-0.5 text-[12px] text-white/35 flex-wrap">
-              <span>{currentSong.artist}</span><span>·</span><span>{currentSong.genre}</span>
-              {duration>0&&<><span>·</span><span>{Math.floor(duration/60)} 分钟</span></>}
-            </div>
-          </div>
-
-          <div className="flex gap-1 px-5 mt-1 mb-1 shrink-0">
-            {["lyrics","comments"].map(t=>(
-              <button key={t} onClick={()=>setViewTab(t)}
-                className={`px-4 py-1.5 text-[13px] font-medium rounded-full transition-all ${viewTab===t?"text-white":"text-white/25 hover:text-white/45"}`}
-                style={{background:viewTab===t?"rgba(255,255,255,0.10)":"transparent"}}>
-                {t==="lyrics"?"歌词":`评论${currentSong.comments?.length>0?` (${currentSong.comments.length})`:""}`}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex-1 min-h-0 px-5 pb-4" style={{overflow:"hidden"}}>
-            {viewTab==="lyrics"?(
-              <div ref={lyricsOuterRef} style={{height:"100%",overflow:"hidden"}}>
-                <div ref={lyricsInnerRef} className="flex flex-col items-center lg:items-start"
-                  style={{gap:"0.75rem",transition:"transform 0.2s linear"}}>
-                  {lyrics.map((l,i)=>(
-                    <p key={i} data-d={i} className={`transition-all duration-500 leading-relaxed ${i===smoothLyricIdx?"text-white/90 font-bold text-lg":"text-white/20 text-sm"}`}
-                      style={{fontFamily:"-apple-system,'PingFang SC',sans-serif"}}>{l.text}</p>
-                  ))}
-                  <div style={{height:"12rem"}}/>
-                </div>
-              </div>
-            ):(
-              <div className="h-full overflow-y-auto lyrics-scroll">
-                <CommentSection songId={currentSong.id} comments={currentSong.comments||[]}/>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       <div className="relative z-10 px-6 pt-2 pb-5"
