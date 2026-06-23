@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect, useMemo } from "react"
 import { usePlayer } from "../context/PlayerContext"
 
 function fmt(s) { const m=Math.floor(Math.max(0,s)/60); return `${m}:${(Math.floor(Math.max(0,s))%60).toString().padStart(2,"0")}` }
@@ -33,6 +34,39 @@ function autoGrad(title) {
 export default function FullscreenPlayer() {
   const { currentSong, isPlaying, currentTime, duration, volume,
     isFullscreen, togglePlay, next, prev, seek, changeVolume, closeFullscreen } = usePlayer()
+
+  // 歌词解析
+  const lyrics = useMemo(() => {
+    const raw = currentSong?.lyrics
+    if (typeof raw === "string") {
+      const lines = raw.split("\n").filter(l=>l.trim())
+      const dur = currentSong?.duration||240
+      const gap = dur/(lines.length+1)
+      return lines.map((t,i)=>({time:gap*(i+1),text:t}))
+    }
+    return Array.isArray(raw)?raw:[]
+  },[currentSong?.lyrics,currentSong?.duration])
+
+  // 当前歌词索引
+  const [currentLyricIdx, setCurrentLyricIdx] = useState(-1)
+  const lyricsScrollRef = useRef(null)
+
+  useEffect(() => {
+    if (!lyrics.length || !isPlaying) return
+    const audio = document.querySelector('audio')
+    if (!audio) return
+    const tick = () => {
+      let idx = -1
+      for (let i = lyrics.length - 1; i >= 0; i--) {
+        if (audio.currentTime >= lyrics[i].time) { idx = i; break }
+      }
+      setCurrentLyricIdx(idx)
+    }
+    const onTime = () => tick()
+    audio.addEventListener('timeupdate', onTime)
+    const interval = setInterval(tick, 300)
+    return () => { audio.removeEventListener('timeupdate', onTime); clearInterval(interval) }
+  }, [lyrics, isPlaying])
 
   if(!isFullscreen||!currentSong)return null
 
@@ -173,6 +207,26 @@ export default function FullscreenPlayer() {
         </div>
 
       </div>
+
+      {/* 歌词 */}
+      {lyrics.length > 0 && (
+        <div className="relative z-10 flex-1 w-full max-w-md mx-auto min-h-0 overflow-hidden px-4">
+          <div className="h-full overflow-y-auto lyrics-scroll flex flex-col items-center gap-3 py-3">
+            {lyrics.map((l, i) => (
+              <p key={i}
+                className={`transition-all duration-400 leading-relaxed text-center ${
+                  i === currentLyricIdx
+                    ? "text-white font-bold text-lg scale-105"
+                    : "text-white/35 text-sm"
+                }`}
+                style={{ fontFamily: "-apple-system,'PingFang SC',sans-serif" }}>
+                {l.text}
+              </p>
+            ))}
+            <div style={{ height: "6rem" }} />
+          </div>
+        </div>
+      )}
 
       <div className="relative z-10 px-6 pt-2 pb-5"
         style={{background:"rgba(255,255,255,0.03)",backdropFilter:"blur(40px)",WebkitBackdropFilter:"blur(40px)",borderTop:"1px solid rgba(255,255,255,0.04)"}}>
