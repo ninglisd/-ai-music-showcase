@@ -206,27 +206,38 @@ export default function FullscreenPlayer() {
           </div>
         </div>
 
-      </div>
-
-      {/* 歌词 */}
-      {lyrics.length > 0 && (
-        <div className="relative z-10 flex-1 w-full max-w-md mx-auto min-h-0 overflow-hidden px-4">
-          <div className="h-full overflow-y-auto lyrics-scroll flex flex-col items-center gap-3 py-3">
-            {lyrics.map((l, i) => (
-              <p key={i}
-                className={`transition-all duration-400 leading-relaxed text-center ${
-                  i === currentLyricIdx
-                    ? "text-white font-bold text-lg scale-105"
-                    : "text-white/35 text-sm"
-                }`}
-                style={{ fontFamily: "-apple-system,'PingFang SC',sans-serif" }}>
-                {l.text}
-              </p>
-            ))}
-            <div style={{ height: "6rem" }} />
+        {/* 右侧歌词 */}
+        <div className="flex-1 w-full max-w-lg lg:max-w-xl min-h-0 flex flex-col rounded-2xl overflow-hidden"
+          style={{background:"rgba(255,255,255,0.03)",backdropFilter:"blur(30px)",WebkitBackdropFilter:"blur(30px)",border:"1px solid rgba(255,255,255,0.05)"}}>
+          <div className="px-5 pt-5 pb-1 shrink-0">
+            <h2 className="text-xl sm:text-2xl font-bold text-white/90 tracking-tight"
+              style={{fontFamily:"-apple-system,'SF Pro Display','PingFang SC',sans-serif"}}>{currentSong.title}</h2>
+            <div className="flex items-center gap-2 mt-0.5 text-[12px] text-white/45 flex-wrap">
+              <span>{currentSong.artist}</span><span>·</span><span>{currentSong.genre}</span>
+              {duration>0&&<><span>·</span><span>{Math.floor(duration/60)} 分钟</span></>}
+            </div>
           </div>
+          {lyrics.length > 0 && (
+            <div className="flex-1 min-h-0 overflow-hidden px-5 pb-4">
+              <div className="h-full overflow-y-auto lyrics-scroll flex flex-col items-center lg:items-start gap-3 py-2">
+                {lyrics.map((l, i) => (
+                  <p key={i}
+                    className={`transition-all duration-400 leading-relaxed ${
+                      i === currentLyricIdx
+                        ? "text-white font-bold text-lg"
+                        : "text-white/30 text-sm"
+                    }`}
+                    style={{ fontFamily: "-apple-system,'PingFang SC',sans-serif" }}>
+                    {l.text}
+                  </p>
+                ))}
+                <div style={{ height: "6rem" }} />
+              </div>
+            </div>
+          )}
         </div>
-      )}
+
+      </div>
 
       <div className="relative z-10 px-6 pt-2 pb-5"
         style={{background:"rgba(255,255,255,0.03)",backdropFilter:"blur(40px)",WebkitBackdropFilter:"blur(40px)",borderTop:"1px solid rgba(255,255,255,0.04)"}}>
