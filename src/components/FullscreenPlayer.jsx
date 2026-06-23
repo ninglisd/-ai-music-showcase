@@ -74,11 +74,17 @@ export default function FullscreenPlayer() {
     return () => { audio.removeEventListener('timeupdate', onTime); clearInterval(interval) }
   }, [lyrics, isPlaying])
 
+  const scrollContainerRef = useRef(null)
+
   // 歌词变化后滚动到当前句
   useEffect(() => {
-    if (currentLyricIdx >= 0 && lyricRefs.current[currentLyricIdx]) {
-      lyricRefs.current[currentLyricIdx].scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
+    const el = lyricRefs.current[currentLyricIdx]
+    const container = scrollContainerRef.current
+    if (!el || !container) return
+    const containerTop = container.getBoundingClientRect().top
+    const elTop = el.getBoundingClientRect().top
+    const offset = elTop - containerTop - container.clientHeight * 0.35
+    container.scrollTo({ top: container.scrollTop + offset, behavior: 'smooth' })
   }, [currentLyricIdx])
 
   if(!isFullscreen||!currentSong)return null
@@ -222,14 +228,14 @@ export default function FullscreenPlayer() {
         {/* 右侧歌词 */}
         <div className="flex-1 w-full max-w-lg lg:max-w-xl min-h-0 flex flex-col rounded-2xl overflow-hidden"
           style={{background:"rgba(255,255,255,0.03)",backdropFilter:"blur(30px)",WebkitBackdropFilter:"blur(30px)",border:"1px solid rgba(255,255,255,0.05)"}}>
-          <div className="flex-1 min-h-0 overflow-hidden px-5 py-4">
-            <div className="h-full overflow-y-auto lyrics-scroll flex flex-col items-center gap-3">
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 lyrics-scroll" ref={scrollContainerRef}>
+            <div className="flex flex-col items-center gap-3">
               {lyrics.map((l, i) => (
                 <p key={i}
                   ref={el => { lyricRefs.current[i] = el }}
-                  className={`transition-all duration-400 leading-relaxed ${
+                  className={`transition-all duration-400 leading-relaxed text-center ${
                     i === currentLyricIdx
-                      ? "text-white font-bold text-lg scale-105"
+                      ? "text-white font-bold text-lg"
                       : "text-white/25 text-sm"
                   }`}
                   style={{ fontFamily: "-apple-system,'PingFang SC',sans-serif" }}>
