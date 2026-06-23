@@ -50,6 +50,7 @@ export default function FullscreenPlayer() {
   // 当前歌词索引 + 自动滚动
   const [currentLyricIdx, setCurrentLyricIdx] = useState(-1)
   const lyricRefs = useRef({})
+  const lastIdxRef = useRef(-1)
 
   useEffect(() => {
     if (!lyrics.length || !isPlaying) return
@@ -60,19 +61,25 @@ export default function FullscreenPlayer() {
       for (let i = lyrics.length - 1; i >= 0; i--) {
         if (audio.currentTime >= lyrics[i].time) { idx = i; break }
       }
-      if (idx !== currentLyricIdx) {
+      if (idx !== lastIdxRef.current) {
+        lastIdxRef.current = idx
         setCurrentLyricIdx(idx)
-        // 自动滚动到当前歌词
-        if (idx >= 0 && lyricRefs.current[idx]) {
-          lyricRefs.current[idx].scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
       }
     }
     const onTime = () => tick()
     audio.addEventListener('timeupdate', onTime)
     const interval = setInterval(tick, 300)
+    lastIdxRef.current = -1
+    tick()
     return () => { audio.removeEventListener('timeupdate', onTime); clearInterval(interval) }
-  }, [lyrics, isPlaying, currentLyricIdx])
+  }, [lyrics, isPlaying])
+
+  // 歌词变化后滚动到当前句
+  useEffect(() => {
+    if (currentLyricIdx >= 0 && lyricRefs.current[currentLyricIdx]) {
+      lyricRefs.current[currentLyricIdx].scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [currentLyricIdx])
 
   if(!isFullscreen||!currentSong)return null
 
@@ -101,7 +108,7 @@ export default function FullscreenPlayer() {
       <div className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-14 px-6 pt-4 pb-2 overflow-hidden min-h-0">
 
         {/* Sony Walkman */}
-        <div className="relative shrink-0 flex items-center justify-center
+        <div className="relative shrink-0 flex items-center justify-center lg:-translate-x-4
                         w-[240px] h-[340px] sm:w-[280px] sm:h-[400px] lg:w-[360px] lg:h-[480px]">
 
           <div className="relative w-full h-full rounded-[32px] overflow-hidden"
