@@ -47,9 +47,9 @@ export default function FullscreenPlayer() {
     return Array.isArray(raw)?raw:[]
   },[currentSong?.lyrics,currentSong?.duration])
 
-  // 当前歌词索引
+  // 当前歌词索引 + 自动滚动
   const [currentLyricIdx, setCurrentLyricIdx] = useState(-1)
-  const lyricsScrollRef = useRef(null)
+  const lyricRefs = useRef({})
 
   useEffect(() => {
     if (!lyrics.length || !isPlaying) return
@@ -60,13 +60,19 @@ export default function FullscreenPlayer() {
       for (let i = lyrics.length - 1; i >= 0; i--) {
         if (audio.currentTime >= lyrics[i].time) { idx = i; break }
       }
-      setCurrentLyricIdx(idx)
+      if (idx !== currentLyricIdx) {
+        setCurrentLyricIdx(idx)
+        // 自动滚动到当前歌词
+        if (idx >= 0 && lyricRefs.current[idx]) {
+          lyricRefs.current[idx].scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }
     }
     const onTime = () => tick()
     audio.addEventListener('timeupdate', onTime)
     const interval = setInterval(tick, 300)
     return () => { audio.removeEventListener('timeupdate', onTime); clearInterval(interval) }
-  }, [lyrics, isPlaying])
+  }, [lyrics, isPlaying, currentLyricIdx])
 
   if(!isFullscreen||!currentSong)return null
 
@@ -209,32 +215,23 @@ export default function FullscreenPlayer() {
         {/* 右侧歌词 */}
         <div className="flex-1 w-full max-w-lg lg:max-w-xl min-h-0 flex flex-col rounded-2xl overflow-hidden"
           style={{background:"rgba(255,255,255,0.03)",backdropFilter:"blur(30px)",WebkitBackdropFilter:"blur(30px)",border:"1px solid rgba(255,255,255,0.05)"}}>
-          <div className="px-5 pt-5 pb-1 shrink-0">
-            <h2 className="text-xl sm:text-2xl font-bold text-white/90 tracking-tight"
-              style={{fontFamily:"-apple-system,'SF Pro Display','PingFang SC',sans-serif"}}>{currentSong.title}</h2>
-            <div className="flex items-center gap-2 mt-0.5 text-[12px] text-white/45 flex-wrap">
-              <span>{currentSong.artist}</span><span>·</span><span>{currentSong.genre}</span>
-              {duration>0&&<><span>·</span><span>{Math.floor(duration/60)} 分钟</span></>}
+          <div className="flex-1 min-h-0 overflow-hidden px-5 py-4">
+            <div className="h-full overflow-y-auto lyrics-scroll flex flex-col items-center gap-3">
+              {lyrics.map((l, i) => (
+                <p key={i}
+                  ref={el => { lyricRefs.current[i] = el }}
+                  className={`transition-all duration-400 leading-relaxed ${
+                    i === currentLyricIdx
+                      ? "text-white font-bold text-lg scale-105"
+                      : "text-white/25 text-sm"
+                  }`}
+                  style={{ fontFamily: "-apple-system,'PingFang SC',sans-serif" }}>
+                  {l.text}
+                </p>
+              ))}
+              <div style={{ height: "50vh" }} />
             </div>
           </div>
-          {lyrics.length > 0 && (
-            <div className="flex-1 min-h-0 overflow-hidden px-5 pb-4">
-              <div className="h-full overflow-y-auto lyrics-scroll flex flex-col items-center lg:items-start gap-3 py-2">
-                {lyrics.map((l, i) => (
-                  <p key={i}
-                    className={`transition-all duration-400 leading-relaxed ${
-                      i === currentLyricIdx
-                        ? "text-white font-bold text-lg"
-                        : "text-white/30 text-sm"
-                    }`}
-                    style={{ fontFamily: "-apple-system,'PingFang SC',sans-serif" }}>
-                    {l.text}
-                  </p>
-                ))}
-                <div style={{ height: "6rem" }} />
-              </div>
-            </div>
-          )}
         </div>
 
       </div>
