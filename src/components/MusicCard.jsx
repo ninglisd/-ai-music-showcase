@@ -82,13 +82,14 @@ const songPalettes = {
   "白昼将尽":     { bg: ["#c0392b", "#8b1a1a", "#5c1010", "#2d0808"], accent: "#e05030" },
   "葬花吟":       { bg: ["#4a154b", "#7b2d8b", "#2d1b3d", "#1a0a20"], accent: "#c97bdb" },
   "裂痕之舞":     { bg: ["#0d3b4f", "#155e6d", "#0a2a38", "#1a4a5c"], accent: "#30b8c0" },
-  "西西弗斯幸福": { bg: ["#0f0f23", "#1a1a3e", "#0d1b2d", "#162040"], accent: "#00e5ff" },
+  "西西弗斯是幸福的": { bg: ["#f8f4f0", "#f0ebe0", "#f8f4f0", "#ebe4d5"], accent: "#111111" },
   "时之圆":       { bg: ["#1a1a3e", "#2d2d6b", "#1a2a4a", "#252560"], accent: "#7b8cff" },
-  "不畏风雨":     { bg: ["#0d2818", "#1a4a2a", "#0f3018", "#1a3d20"], accent: "#40c060" },
+  "不畏风雨":     { bg: ["#1a1a2e", "#2d2d4e", "#1a1a3e", "#252545"], accent: "#ff6b6b" },
   "莎莉花园":     { bg: ["#3d2010", "#5c3a1a", "#4a2a10", "#2a1808"], accent: "#e0a030" },
   "二十亿光年的孤独": { bg: ["#0a1030", "#151d50", "#0d1440", "#121848"], accent: "#4080ff" },
   "我想成为这样的人": { bg: ["#2d2510", "#3d3818", "#2a200c", "#1a1808"], accent: "#e0c040" },
   "破阵乐":       { bg: ["#3d0a0a", "#5c1010", "#2d0000", "#1a0505"], accent: "#e84020" },
+  "破阵子":       { bg: ["#3d0a0a", "#5c1010", "#2d0000", "#1a0505"], accent: "#e84020" },
 }
 
 const defaultPalette = { bg: ["#1a1a2e", "#2d1b4e", "#1a1a3e", "#251845"], accent: "#8b5cf6" }
@@ -117,24 +118,46 @@ function AnimatedPattern({ song }) {
     opacity: 0.25 + Math.random() * 0.25,
   })
 
-  /* 白昼将尽 — 闪电/射线 */
+  /* 白昼将尽 — Q弹爱心 */
   if (title === "白昼将尽") {
-    const bolts = []
-    for (let i = 0; i < 8; i++) {
-      const x1 = 10 + Math.random() * 80, y1 = -5
-      const mx = x1 + (Math.random() - 0.5) * 30, my = 30 + Math.random() * 30
-      const x2 = x1 + (Math.random() - 0.5) * 50, y2 = 110
-      const d = `M${x1} ${y1} L${mx} ${my} L${x1 + 5} ${my + 5} L${x2} ${y2}`
-      bolts.push(
-        <g key={i} opacity={0.12 + Math.random() * 0.2}>
-          <path d={d} stroke={c} strokeWidth={0.6 + Math.random() * 1.2} fill="none"
-            strokeLinecap="round" strokeLinejoin="round">
-            <animate attributeName="opacity" values="0.05;0.3;0.05" dur={`${2 + Math.random() * 4}s`} repeatCount="indefinite" begin={`${Math.random() * 3}s`} />
-          </path>
-        </g>
-      )
-    }
-    return <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">{bolts}</svg>
+    // 圆润可爱的Q版爱心路径
+    const qHeart = "M50 82 C30 68 12 50 12 28 C12 14 22 5 34 5 C42 5 48 10 50 18 C52 10 58 5 66 5 C78 5 88 14 88 28 C88 50 70 68 50 82Z"
+    return (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <radialGradient id="qh-grad" cx="40%" cy="30%" r="55%">
+            <stop offset="0%" stopColor="#ff6b8a" />
+            <stop offset="40%" stopColor="#ff3b5c" />
+            <stop offset="80%" stopColor="#d63045" />
+            <stop offset="100%" stopColor="#8b1020" />
+          </radialGradient>
+          <radialGradient id="qh-shine" cx="30%" cy="22%" r="25%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.8)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </radialGradient>
+          <filter id="qh-glow">
+            <feGaussianBlur stdDeviation="1.5" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        {/* 光晕 */}
+        <ellipse cx="50" cy="48" rx="42" ry="44" fill="#ff3b5c" opacity="0.12" filter="url(#qh-glow)">
+          <animateTransform attributeName="transform" type="scale" values="1;1.12;1" dur="1.4s" repeatCount="indefinite" />
+        </ellipse>
+        {/* 主体 */}
+        <path d={qHeart} fill="url(#qh-grad)" opacity="0.55" filter="url(#qh-glow)">
+          <animateTransform attributeName="transform" type="scale" values="1;1.05;0.97;1.03;1" dur="1.2s" repeatCount="indefinite"
+            keyTimes="0;0.3;0.5;0.7;1" calcMode="spline"
+            keySplines="0.4 0 0.6 1; 0.4 0 0.2 1; 0.4 0 0.6 1; 0.4 0 0.2 1" />
+        </path>
+        {/* 高光 */}
+        <path d={qHeart} fill="url(#qh-shine)" opacity="0.3">
+          <animateTransform attributeName="transform" type="scale" values="1;1.05;0.97;1.03;1" dur="1.2s" repeatCount="indefinite"
+            keyTimes="0;0.3;0.5;0.7;1" calcMode="spline"
+            keySplines="0.4 0 0.6 1; 0.4 0 0.2 1; 0.4 0 0.6 1; 0.4 0 0.2 1" />
+        </path>
+      </svg>
+    )
   }
 
   /* 葬花吟 — 飘落花瓣 */
@@ -181,25 +204,51 @@ function AnimatedPattern({ song }) {
     return <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">{lines}</svg>
   }
 
-  /* 西西弗斯幸福 — 赛博网格 */
-  if (title === "西西弗斯幸福") {
-    const grid = []
-    for (let i = 0; i < 5; i++) {
-      grid.push(<line key={`h${i}`} x1="0" y1={20 + i * 16} x2="100" y2={20 + i * 16} stroke={c} strokeWidth="0.3" opacity="0.12">
-        <animate attributeName="opacity" values="0.05;0.2;0.05" dur={`${3 + i * 1.5}s`} repeatCount="indefinite" begin={`${i * 0.7}s`} />
-      </line>)
-      grid.push(<line key={`v${i}`} x1={20 + i * 16} y1="0" x2={20 + i * 16} y2="100" stroke={c} strokeWidth="0.3" opacity="0.12">
-        <animate attributeName="opacity" values="0.05;0.2;0.05" dur={`${3 + i * 1.5}s`} repeatCount="indefinite" begin={`${i * 0.7 + 1}s`} />
-      </line>)
-    }
-    for (let i = 0; i < 5; i++) {
-      grid.push(
-        <rect key={`dot-${i}`} x={10 + Math.random() * 80} y={10 + Math.random() * 80} width="1.5" height="1.5" rx="0.75" fill={c} opacity="0.3">
-          <animate attributeName="opacity" values="0.1;0.6;0.1" dur={`${1.5 + Math.random() * 2}s`} repeatCount="indefinite" begin={`${Math.random() * 3}s`} />
-        </rect>
-      )
-    }
-    return <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">{grid}</svg>
+  /* 西西弗斯是幸福的 — 蒙德里安《红蓝黄构图》*/
+  if (title === "西西弗斯是幸福的") {
+    const BLACK = "#111111"
+    // 经典蒙德里安：白底+粗黑线+红黄蓝三原色块
+    const rects = [
+      // 大红块 (左上区域，视觉焦点)
+      { x: 3, y: 3, w: 44, h: 52, color: "#e63946" },
+      // 小蓝块 (右侧中部)
+      { x: 82, y: 38, w: 15, h: 18, color: "#1d3557" },
+      // 小黄块 (右下)
+      { x: 82, y: 72, w: 15, h: 11, color: "#ffd166" },
+      // 白/浅灰区域 (左下方)
+      { x: 3, y: 69, w: 52, h: 15, color: "#f0ece4" },
+      // 白区域 (右上)
+      { x: 58, y: 3, w: 13, h: 24, color: "#f5f1eb" },
+      // 白区域 (中右)
+      { x: 58, y: 38, w: 13, h: 18, color: "#e8e2d8" },
+    ]
+    // 黑线：横向 + 纵向
+    const lines = [
+      // 水平线
+      { x1: 3, y1: 55, x2: 97, y2: 55, w: 3 },
+      { x1: 3, y1: 29, x2: 71, y2: 29, w: 2.5 },
+      { x1: 58, y1: 72, x2: 97, y2: 72, w: 3 },
+      { x1: 3, y1: 84, x2: 55, y2: 84, w: 2 },
+      // 垂直线
+      { x1: 47, y1: 3, x2: 47, y2: 97, w: 3 },
+      { x1: 58, y1: 29, x2: 58, y2: 97, w: 2 },
+      { x1: 71, y1: 3, x2: 71, y2: 55, w: 2.5 },
+      { x1: 82, y1: 29, x2: 82, y2: 97, w: 2 },
+    ]
+    return (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {rects.map((r, i) => (
+          <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} fill={r.color}>
+            <animate attributeName="opacity" values="0.88;0.95;0.88"
+              dur={`${5 + i * 0.8}s`} repeatCount="indefinite" begin={`${i * 0.4}s`} />
+          </rect>
+        ))}
+        {lines.map((l, i) => (
+          <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+            stroke={BLACK} strokeWidth={l.w} strokeLinecap="square" />
+        ))}
+      </svg>
+    )
   }
 
   /* 时之圆 — 同心圆涟漪 */
@@ -216,33 +265,64 @@ function AnimatedPattern({ song }) {
     return <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">{circles}</svg>
   }
 
-  /* 不畏风雨 — 雨滴 + 叶片 */
+  /* 不畏风雨 — 红蓝黄雨伞 */
   if (title === "不畏风雨") {
-    const drops = []
-    for (let i = 0; i < 15; i++) {
-      drops.push(
-        <line key={i} x1={10 + Math.random() * 80} y1={-5 - Math.random() * 20} x2={10 + Math.random() * 80} y2={-5 - Math.random() * 20 + 6}
-          stroke={c} strokeWidth="0.5" strokeLinecap="round" opacity="0.2">
+    const cx = 50, cy = 52, R = 30
+    return (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <radialGradient id="umb-dome" cx="50%" cy="30%" r="60%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
+            <stop offset="50%" stopColor="rgba(255,255,255,0.05)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.35)" />
+          </radialGradient>
+        </defs>
+        <g>
           <animateTransform attributeName="transform" type="translate"
-            values={`0,0; ${(Math.random()-0.5)*8},110`}
-            dur={`${1.5 + Math.random() * 3}s`} repeatCount="indefinite" begin={`${Math.random() * 4}s`} />
-          <animate attributeName="opacity" values="0.25;0.05" dur={`${1.5 + Math.random() * 3}s`} repeatCount="indefinite" begin={`${Math.random() * 4}s`} />
-        </line>
-      )
-    }
-    for (let i = 0; i < 3; i++) {
-      const cx = 30 + i * 20; const cy = 50 + Math.sin(i * 1.5) * 15
-      drops.push(
-        <ellipse key={`leaf-${i}`} cx={cx} cy={cy} rx="6" ry="3" stroke={c} strokeWidth="0.4" fill={`${c}10`}
-          transform={`rotate(${15 + i * 10}, ${cx}, ${cy})`} opacity="0.18">
-          <animateTransform attributeName="transform" type="translate"
-            values={`0,0; ${2 - i * 2},${-3 - i * 2}; 0,0`}
-            dur={`${4 + i * 2}s`} repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.1;0.25;0.1" dur={`${5 + i}s`} repeatCount="indefinite" />
-        </ellipse>
-      )
-    }
-    return <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">{drops}</svg>
+            values="0,0; -4,0; 0,0; 4,0; 0,0" dur="7s" repeatCount="indefinite" begin="0s" />
+          {/* 伞面穹顶 — 半椭圆 */}
+          <path d={`M${cx - R} ${cy} A${R} ${R * 0.8} 0 0 1 ${cx + R} ${cy}`}
+            fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+          {/* 红黄蓝三色块 — 裁剪到穹顶内 */}
+          <clipPath id="umb-clip">
+            <path d={`M${cx - R - 2} ${cy + 2} A${R + 2} ${R * 0.8 + 2} 0 0 1 ${cx + R + 2} ${cy + 2} Z`} />
+          </clipPath>
+          <g clipPath="url(#umb-clip)">
+            <rect x={cx - R} y={cy - 20} width={R * 2 / 3} height={R * 2} fill="#e63946" opacity="0.6" />
+            <rect x={cx - R / 3} y={cy - 20} width={R * 2 / 3} height={R * 2} fill="#ffd166" opacity="0.6" />
+            <rect x={cx + R / 3} y={cy - 20} width={R * 2 / 3} height={R * 2} fill="#4d96ff" opacity="0.6" />
+          </g>
+          {/* 伞骨线 */}
+          {[0, 1, 2, 3].map(i => {
+            const ax = cx - R + i * (R * 2 / 3)
+            return <line key={i} x1={ax} y1={cy - 2} x2={ax} y2={cy} stroke="rgba(255,255,255,0.25)" strokeWidth="0.4" />
+          })}
+          {/* 穹顶高光+暗部 */}
+          <path d={`M${cx - R} ${cy} A${R} ${R * 0.8} 0 0 1 ${cx + R} ${cy}`}
+            fill="url(#umb-dome)" />
+          {/* 伞面底边波浪 */}
+          <path d={`M${cx - R} ${cy} Q${cx - R + 6} ${cy + 5} ${cx - R/3} ${cy + 3} Q${cx} ${cy + 6} ${cx + R/3} ${cy + 3} Q${cx + R - 6} ${cy + 5} ${cx + R} ${cy}`}
+            fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6" />
+          {/* 伞顶 */}
+          <line x1={cx} y1={cy - R * 0.78} x2={cx} y2={cy - R * 1.05} stroke="rgba(255,255,255,0.4)" strokeWidth="1" strokeLinecap="round" />
+          <circle cx={cx} cy={cy - R * 1.1} r="1.5" fill="rgba(255,255,255,0.5)" />
+          {/* 伞杆 */}
+          <line x1={cx} y1={cy + 1} x2={cx} y2={cy + 32} stroke="#ddd" strokeWidth="1.8" strokeLinecap="round" opacity="0.5" />
+          {/* J形弯柄 */}
+          <path d={`M${cx} ${cy + 32} Q${cx} ${cy + 42} ${cx - 10} ${cy + 42}`}
+            stroke="#ddd" strokeWidth="1.8" fill="none" strokeLinecap="round" opacity="0.5" />
+          {/* 雨滴 */}
+          {[0, 1, 2, 3, 4].map(i => (
+            <line key={`rain-${i}`}
+              x1={cx - 15 + i * 14} y1={cy + 5 + i * 5}
+              x2={cx - 15 + i * 14 - 1} y2={cy + 12 + i * 5}
+              stroke="rgba(150,200,255,0.35)" strokeWidth="0.5" strokeLinecap="round">
+              <animate attributeName="opacity" values="0.4;0;0.4" dur="2s" repeatCount="indefinite" begin={`${i * 0.4}s`} />
+            </line>
+          ))}
+        </g>
+      </svg>
+    )
   }
 
   /* 莎莉花园 — 有机浮游形态 */
@@ -263,28 +343,63 @@ function AnimatedPattern({ song }) {
     return <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">{blobs}</svg>
   }
 
-  /* 二十亿光年的孤独 — 星点+星座连线 */
+  /* 二十亿光年的孤独 — 赛博朋克时钟 */
   if (title === "二十亿光年的孤独") {
-    const stars = []
-    const pts = []
-    for (let i = 0; i < 25; i++) {
-      pts.push({ x: Math.random() * 100, y: Math.random() * 100 })
-      stars.push(
-        <circle key={i} cx={pts[i].x} cy={pts[i].y} r={0.4 + Math.random() * 1.2} fill={c} opacity={0.15 + Math.random() * 0.4}>
-          <animate attributeName="opacity" values={`${0.1 + Math.random() * 0.2};${0.4 + Math.random() * 0.4};${0.1 + Math.random() * 0.2}`}
-            dur={`${2 + Math.random() * 4}s`} repeatCount="indefinite" begin={`${Math.random() * 3}s`} />
+    const cx = 50, cy = 48, R = 32
+    return (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <radialGradient id="clock-bg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(0,229,255,0.08)" />
+            <stop offset="100%" stopColor="rgba(0,229,255,0)" />
+          </radialGradient>
+        </defs>
+        {/* 外圈 */}
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke={c} strokeWidth="0.4" opacity="0.3">
+          <animate attributeName="opacity" values="0.2;0.4;0.2" dur="3s" repeatCount="indefinite" />
         </circle>
-      )
-    }
-    for (let i = 0; i < 4; i++) {
-      const a = pts[i * 3]; const b = pts[i * 3 + 1]
-      if (a && b) stars.push(
-        <line key={`link-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={c} strokeWidth="0.2" opacity="0.1">
-          <animate attributeName="opacity" values="0.05;0.2;0.05" dur="6s" repeatCount="indefinite" begin={`${i * 2}s`} />
+        <circle cx={cx} cy={cy} r={R - 5} fill="none" stroke={c} strokeWidth="0.2" opacity="0.15" strokeDasharray="1 3">
+          <animateTransform attributeName="transform" type="rotate" from="0 50 48" to="360 50 48" dur="20s" repeatCount="indefinite" />
+        </circle>
+        {/* 刻度 */}
+        {Array.from({length: 12}, (_, i) => {
+          const a = (i / 12) * Math.PI * 2 - Math.PI / 2
+          const x1 = cx + Math.cos(a) * (R - 6)
+          const y1 = cy + Math.sin(a) * (R - 6)
+          const x2 = cx + Math.cos(a) * (R - 2)
+          const y2 = cy + Math.sin(a) * (R - 2)
+          return <line key={`tick-${i}`} x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke={c} strokeWidth={i % 3 === 0 ? 0.8 : 0.3} opacity="0.3" strokeLinecap="round" />
+        })}
+        {/* 时针 */}
+        <line x1={cx} y1={cy} x2={cx} y2={cy - 14} stroke={c} strokeWidth="1.2" opacity="0.45" strokeLinecap="round">
+          <animateTransform attributeName="transform" type="rotate" from="0 50 48" to="360 50 48" dur="120s" repeatCount="indefinite" />
         </line>
-      )
-    }
-    return <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">{stars}</svg>
+        {/* 分针 */}
+        <line x1={cx} y1={cy} x2={cx + 18} y2={cy} stroke={c} strokeWidth="0.7" opacity="0.35" strokeLinecap="round">
+          <animateTransform attributeName="transform" type="rotate" from="0 50 48" to="360 50 48" dur="10s" repeatCount="indefinite" />
+        </line>
+        {/* 秒针 */}
+        <line x1={cx} y1={cy + 5} x2={cx} y2={cy - 22} stroke="#ff3b5c" strokeWidth="0.3" opacity="0.5" strokeLinecap="round">
+          <animateTransform attributeName="transform" type="rotate" from="0 50 48" to="360 50 48" dur="60s" repeatCount="indefinite" />
+        </line>
+        {/* 中心点 */}
+        <circle cx={cx} cy={cy} r="1.5" fill={c} opacity="0.5">
+          <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite" />
+        </circle>
+        {/* 光晕 */}
+        <circle cx={cx} cy={cy} r={R + 2} fill="url(#clock-bg)" opacity="0.5" />
+        {/* 数字 */}
+        {[12,3,6,9].map((n, i) => {
+          const a = (i / 4) * Math.PI * 2 - Math.PI / 2
+          const tx = cx + Math.cos(a) * (R - 12)
+          const ty = cy + Math.sin(a) * (R - 12)
+          return <text key={`num-${i}`} x={tx} y={ty} fill={c} opacity="0.3"
+            fontSize="5" fontWeight="bold" textAnchor="middle" dominantBaseline="central"
+            fontFamily="'SF Mono', monospace">{n}</text>
+        })}
+      </svg>
+    )
   }
 
   /* 我想成为这样的人 — 禅意波纹 */
@@ -302,20 +417,104 @@ function AnimatedPattern({ song }) {
     return <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">{zen}</svg>
   }
 
-  /* 破阵乐 — 几何菱形/盾形 */
-  if (title === "破阵乐") {
-    const shields = []
-    for (let i = 0; i < 5; i++) {
-      const cx = 20 + i * 16; const cy = 40 + (i % 2) * 25; const s = 6 + i * 0.5
-      shields.push(
-        <polygon key={i} points={`${cx},${cy - s} ${cx + s * 0.7},${cy} ${cx},${cy + s} ${cx - s * 0.7},${cy}`}
-          stroke={c} strokeWidth="0.5" fill={`${c}08`} opacity="0.18">
-          <animate attributeName="opacity" values="0.08;0.3;0.08" dur={`${4 + i * 1.5}s`} repeatCount="indefinite" begin={`${i * 0.8}s`} />
-          <animateTransform attributeName="transform" type="scale" values="1;1.1;1" dur={`${5 + i * 2}s`} repeatCount="indefinite" />
-        </polygon>
-      )
-    }
-    return <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">{shields}</svg>
+  /* 破阵乐/破阵子 — 闪电 */
+  if (title === "破阵乐" || title === "破阵子") {
+    // 预计算闪电路径（避免 Math.random 在每次渲染时变化）
+    const boltPaths = [
+      { x: 25, y: -5, segs: [{dx:5,dy:15},{dx:-8,dy:20},{dx:12,dy:18},{dx:-3,dy:22},{dx:6,dy:20},{dx:-4,dy:15}] },
+      { x: 55, y: -5, segs: [{dx:-6,dy:18},{dx:10,dy:22},{dx:-7,dy:16},{dx:9,dy:20},{dx:-5,dy:24}] },
+      { x: 72, y: -5, segs: [{dx:3,dy:12},{dx:-10,dy:20},{dx:8,dy:25},{dx:-6,dy:18},{dx:4,dy:20},{dx:-8,dy:15}] },
+      { x: 35, y: -5, segs: [{dx:-4,dy:20},{dx:8,dy:18},{dx:-9,dy:22},{dx:5,dy:24},{dx:-6,dy:16}] },
+      { x: 60, y: -5, segs: [{dx:7,dy:14},{dx:-5,dy:24},{dx:10,dy:20},{dx:-8,dy:18},{dx:3,dy:24}] },
+    ]
+    return (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <filter id="bolt-glow">
+            <feGaussianBlur stdDeviation="1.5" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        {boltPaths.map((bp, i) => (
+          <g key={i} filter="url(#bolt-glow)">
+            <animate attributeName="opacity" values="0;0.7;0;0.8;0" dur={`${1.8 + i * 0.4}s`}
+              repeatCount="indefinite" begin={`${i * 0.6}s`} />
+            <polyline
+              points={(() => {
+                let x = bp.x, y = bp.y
+                let pts = `${x},${y}`
+                bp.segs.forEach(s => { x += s.dx; y += s.dy; pts += ` ${x},${y}` })
+                return pts
+              })()}
+              fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+            <polyline
+              points={(() => {
+                let x = bp.x, y = bp.y
+                let pts = `${x},${y}`
+                bp.segs.forEach(s => { x += s.dx; y += s.dy; pts += ` ${x},${y}` })
+                return pts
+              })()}
+              fill="none" stroke="#fff" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+          </g>
+        ))}
+      </svg>
+    )
+  }
+
+  /* 带着不服输的孤勇去和世界交手吧 — 白色灯塔 + 探照灯 */
+  if (title === "带着不服输的孤勇去和世界交手吧") {
+    const lx = 50, ly = 55, lw = 12, lh = 32
+    return (
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <radialGradient id="beam-grad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(255,255,200,0.5)" />
+            <stop offset="100%" stopColor="rgba(255,255,200,0)" />
+          </radialGradient>
+          <filter id="lh-glow">
+            <feGaussianBlur stdDeviation="2" />
+          </filter>
+        </defs>
+        {/* 探照灯锥形光束 — 4个方向 */}
+        {[0, 45, 135, 180, 225, 315].map((angle, i) => {
+          const rad = angle * Math.PI / 180
+          const dx = Math.cos(rad) * 55, dy = Math.sin(rad) * 55
+          const px = Math.cos(rad + 0.15) * 12, py = Math.sin(rad + 0.15) * 12
+          const nx = Math.cos(rad - 0.15) * 12, ny = Math.sin(rad - 0.15) * 12
+          return (
+            <g key={`beam-${i}`}>
+              <polygon
+                points={`${lx + px},${ly - lh/2 + py} ${lx + nx},${ly - lh/2 + ny} ${lx + dx},${ly - lh/2 + dy}`}
+                fill="url(#beam-grad)" opacity="0.18">
+                <animate attributeName="opacity" values="0.12;0.25;0.12" dur="3s" repeatCount="indefinite" begin={`${i * 0.5}s`} />
+              </polygon>
+            </g>
+          )
+        })}
+        {/* 灯塔底座 */}
+        <rect x={lx - lw} y={ly + lh/2 - 5} width={lw * 2} height="8" rx="2"
+          fill="#ddd" opacity="0.4" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+        {/* 灯塔塔身 — 下宽上窄梯形 */}
+        <polygon points={`${lx - lw},${ly + lh/2 - 4} ${lx + lw},${ly + lh/2 - 4} ${lx + lw * 0.7},${ly - lh/2 + 2} ${lx - lw * 0.7},${ly - lh/2 + 2}`}
+          fill="#f5f5f5" opacity="0.55" stroke="rgba(255,255,255,0.4)" strokeWidth="0.6" />
+        {/* 红色条纹 — 两条 */}
+        <line x1={lx - lw * 0.9} y1={ly + lh/2 - 14} x2={lx + lw * 0.9} y2={ly + lh/2 - 14}
+          stroke="#e63946" strokeWidth="2" opacity="0.45" />
+        <line x1={lx - lw * 0.85} y1={ly + lh/2 - 22} x2={lx + lw * 0.85} y2={ly + lh/2 - 22}
+          stroke="#e63946" strokeWidth="2" opacity="0.45" />
+        {/* 灯塔顶部灯室 */}
+        <rect x={lx - lw * 0.6} y={ly - lh/2 - 2} width={lw * 1.2} height="6" rx="1.5"
+          fill="#fff8dc" opacity="0.6" filter="url(#lh-glow)" stroke="rgba(255,255,255,0.5)" strokeWidth="0.5" />
+        {/* 灯室发光 */}
+        <circle cx={lx} cy={ly - lh/2 + 1} r="8" fill="rgba(255,255,220,0.3)" filter="url(#lh-glow)">
+          <animate attributeName="opacity" values="0.2;0.5;0.2" dur="2s" repeatCount="indefinite" />
+        </circle>
+        {/* 塔顶 */}
+        <polygon points={`${lx - lw * 0.5},${ly - lh/2 - 4} ${lx + lw * 0.5},${ly - lh/2 - 4} ${lx},${ly - lh/2 - 9}`}
+          fill="#e63946" opacity="0.45" />
+        <circle cx={lx} cy={ly - lh/2 - 10} r="1" fill="rgba(255,255,255,0.6)" />
+      </svg>
+    )
   }
 
   /* 其他歌曲：通用流动线条 */

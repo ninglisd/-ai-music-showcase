@@ -15,9 +15,13 @@ export function PlayerProvider({ children, songs = [], toggleLike, addComment })
   const playModeRef = useRef(playMode)
   const shuffleHistoryRef = useRef([])
   const audioRef = useRef(null)
+  const currentIndexRef = useRef(currentIndex)
+  const songsRef = useRef(songs)
 
-  // Keep ref in sync so onEnded closure always sees latest playMode
+  // Keep refs in sync so onEnded closure always sees latest values
   useEffect(() => { playModeRef.current = playMode }, [playMode])
+  useEffect(() => { currentIndexRef.current = currentIndex }, [currentIndex])
+  useEffect(() => { songsRef.current = songs }, [songs])
 
   const currentSong = currentIndex >= 0 ? songs[currentIndex] : null
 
@@ -55,33 +59,35 @@ export function PlayerProvider({ children, songs = [], toggleLike, addComment })
 
   const next = useCallback(() => {
     if (songs.length === 0) return
-    if (playMode === "SHUFFLE") {
-      shuffleHistoryRef.current.push(currentIndex)
+    const cur = currentIndexRef.current
+    const list = songsRef.current
+    if (playModeRef.current === "SHUFFLE") {
+      shuffleHistoryRef.current.push(cur)
       if (shuffleHistoryRef.current.length > SHUFFLE_HISTORY_MAX) shuffleHistoryRef.current.shift()
-      const pool = songs.map((_, i) => i).filter((i) => !shuffleHistoryRef.current.includes(i))
+      const pool = list.map((_, i) => i).filter((i) => !shuffleHistoryRef.current.includes(i))
       if (pool.length === 0) {
-        shuffleHistoryRef.current = [currentIndex]
-        const newPool = songs.map((_, i) => i).filter((i) => i !== currentIndex)
+        shuffleHistoryRef.current = [cur]
+        const newPool = list.map((_, i) => i).filter((i) => i !== cur)
         const ri = newPool[Math.floor(Math.random() * newPool.length)]
-        play(ri >= 0 ? ri : (currentIndex + 1) % songs.length)
+        play(ri >= 0 ? ri : (cur + 1) % list.length)
       } else {
         play(pool[Math.floor(Math.random() * pool.length)])
       }
       return
     }
-    const nextIndex = (currentIndex + 1) % songs.length
-    play(nextIndex)
-  }, [currentIndex, play, playMode, songs.length])
+    play((cur + 1) % list.length)
+  }, [play])
 
   const prev = useCallback(() => {
     if (songs.length === 0) return
-    if (playMode === "SHUFFLE" && shuffleHistoryRef.current.length > 0) {
+    const cur = currentIndexRef.current
+    const list = songsRef.current
+    if (playModeRef.current === "SHUFFLE" && shuffleHistoryRef.current.length > 0) {
       play(shuffleHistoryRef.current.pop())
       return
     }
-    const prevIndex = (currentIndex - 1 + songs.length) % songs.length
-    play(prevIndex)
-  }, [currentIndex, play, playMode, songs.length])
+    play((cur - 1 + list.length) % list.length)
+  }, [play])
 
   const seek = useCallback((time) => {
     if (audioRef.current) {
@@ -115,13 +121,40 @@ export function PlayerProvider({ children, songs = [], toggleLike, addComment })
     const onLoadedMetadata = () => setDuration(audio.duration)
     const onEnded = () => {
       setIsPlaying(false)
-      if (playModeRef.current === "REPEAT_ONE") {
-        if (audio) { audio.currentTime = 0; audio.play().catch(() => {}) }
-      } else if (playModeRef.current === "NORMAL" && currentIndex >= songs.length - 1) {
-        // Stop at end in NORMAL mode
-      } else {
-        next()
+      const mode = playModeRef.current
+      const cur = currentIndexRef.current
+      const list = songsRef.current
+
+      if (mode === "REPEAT_ONE") {
+        // 单曲循环
+        const a = audio
+        if (a) { a.currentTime = 0; a.play().catch(() => {}) }
+        return
       }
+
+      if (mode === "SHUFFLE") {
+        // 随机播放
+        shuffleHistoryRef.current.push(cur)
+        if (shuffleHistoryRef.current.length > SHUFFLE_HISTORY_MAX) shuffleHistoryRef.current.shift()
+        const pool = list.map((_, i) => i).filter((i) => !shuffleHistoryRef.current.includes(i))
+        if (pool.length === 0) {
+          shuffleHistoryRef.current = [cur]
+          const newPool = list.map((_, i) => i).filter((i) => i !== cur)
+          const ri = newPool[Math.floor(Math.random() * newPool.length)]
+          play(ri >= 0 ? ri : (cur + 1) % list.length)
+        } else {
+          play(pool[Math.floor(Math.random() * pool.length)])
+        }
+        return
+      }
+
+      // REPEAT_ALL / NORMAL: 顺序播放下一首
+      const nextIndex = (cur + 1) % list.length
+      if (mode === "NORMAL" && nextIndex === 0) {
+        // NORMAL模式播完最后一首就停
+        return
+      }
+      play(nextIndex)
     }
     const onPlay = () => setIsPlaying(true)
     const onPause = () => setIsPlaying(false)
